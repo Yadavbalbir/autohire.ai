@@ -1,0 +1,53 @@
+{
+  "stats": {
+    "totalCandidates": 0,
+    "activeInterviews": 0,
+    "completedInterviews": 0,
+    "totalPracticeSessions": 0,
+    "averagePracticeScore": 0,
+    "lastUpdated": "2025-09-15T10:00:00Z"
+  },
+  "settings": {
+    "companyName": "AutoHire.ai",
+    "emailNotifications": true,
+    "reminderSettings": {
+      "candidateReminder": 24,
+      "interviewerReminder": 2
+    },
+    "interviewTypes": [
+      "technical",
+      "behavioral", 
+      "system_design",
+      "cultural_fit"
+    ],
+    "interviewFormats": [
+      "video_call",
+      "phone_call", 
+      "in_person"
+    ],
+    "defaultInterviewDuration": 60
+  },
+  "interviewers": [
+    {
+      "id": "interviewer_001",
+      "name": "Alice Smith",
+      "email": "alice.smith@company.com", 
+      "specializations": ["Frontend", "React", "JavaScript"],
+      "availability": "weekdays_9_5"
+    },
+    {
+      "id": "interviewer_002",
+      "name": "Bob Chen",
+      "email": "bob.chen@company.com",
+      "specializations": ["Full Stack", "System Design", "Node.js"],
+      "availability": "weekdays_10_6"
+    },
+    {
+      "id": "interviewer_003", 
+      "name": "Carol Davis",
+      "email": "carol.davis@company.com",
+      "specializations": ["Backend", "Java", "Architecture"],
+      "availability": "weekdays_8_4"
+    }
+  ]
+}

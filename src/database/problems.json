@@ -1,0 +1,97 @@
+[
+  {
+    "id": "two_sum",
+    "title": "Two Sum",
+    "difficulty": "Easy",
+    "category": "Array",
+    "description": "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
+    "examples": [
+      {
+        "input": "nums = [2,7,11,15], target = 9",
+        "output": "[0,1]",
+        "explanation": "Because nums[0] + nums[1] == 9, we return [0, 1]."
+      }
+    ],
+    "constraints": [
+      "2 <= nums.length <= 104",
+      "-109 <= nums[i] <= 109", 
+      "-109 <= target <= 109",
+      "Only one valid answer exists."
+    ],
+    "template": "function twoSum(nums, target) {\n    // Your code here\n}",
+    "testCases": [
+      {"input": {"nums": [2,7,11,15], "target": 9}, "expected": [0,1]},
+      {"input": {"nums": [3,2,4], "target": 6}, "expected": [1,2]},
+      {"input": {"nums": [3,3], "target": 6}, "expected": [0,1]}
+    ]
+  },
+  {
+    "id": "reverse_string",
+    "title": "Reverse String", 
+    "difficulty": "Easy",
+    "category": "String",
+    "description": "Write a function that reverses a string. The input string is given as an array of characters s.",
+    "examples": [
+      {
+        "input": "s = [\"h\",\"e\",\"l\",\"l\",\"o\"]",
+        "output": "[\"o\",\"l\",\"l\",\"e\",\"h\"]"
+      }
+    ],
+    "constraints": [
+      "1 <= s.length <= 105",
+      "s[i] is a printable ascii character."
+    ],
+    "template": "function reverseString(s) {\n    // Your code here\n}",
+    "testCases": [
+      {"input": {"s": ["h","e","l","l","o"]}, "expected": ["o","l","l","e","h"]},
+      {"input": {"s": ["H","a","n","n","a","h"]}, "expected": ["h","a","n","n","a","H"]}
+    ]
+  },
+  {
+    "id": "palindrome",
+    "title": "Valid Palindrome",
+    "difficulty": "Easy", 
+    "category": "String",
+    "description": "A phrase is a palindrome if, after converting all uppercase letters into lowercase letters and removing all non-alphanumeric characters, it reads the same forward and backward.",
+    "examples": [
+      {
+        "input": "s = \"A man, a plan, a canal: Panama\"",
+        "output": "true",
+        "explanation": "\"amanaplanacanalpanama\" is a palindrome."
+      }
+    ],
+    "constraints": [
+      "1 <= s.length <= 2 * 105",
+      "s consists only of printable ASCII characters."
+    ],
+    "template": "function isPalindrome(s) {\n    // Your code here\n}",
+    "testCases": [
+      {"input": {"s": "A man, a plan, a canal: Panama"}, "expected": true},
+      {"input": {"s": "race a car"}, "expected": false},
+      {"input": {"s": " "}, "expected": true}
+    ]
+  },
+  {
+    "id": "fibonacci",
+    "title": "Fibonacci Number",
+    "difficulty": "Easy",
+    "category": "Dynamic Programming", 
+    "description": "The Fibonacci numbers, commonly denoted F(n) form a sequence, called the Fibonacci sequence, such that each number is the sum of the two preceding ones.",
+    "examples": [
+      {
+        "input": "n = 2",
+        "output": "1",
+        "explanation": "F(2) = F(1) + F(0) = 1 + 0 = 1."
+      }
+    ],
+    "constraints": [
+      "0 <= n <= 30"
+    ],
+    "template": "function fib(n) {\n    // Your code here\n}",
+    "testCases": [
+      {"input": {"n": 2}, "expected": 1},
+      {"input": {"n": 3}, "expected": 2},
+      {"input": {"n": 4}, "expected": 3}
+    ]
+  }
+]
