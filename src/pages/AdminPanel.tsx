@@ -34,7 +34,8 @@ const AdminPanel: React.FC = () => {
 
   const tabs = [
     { id: 'dashboard', name: 'Dashboard', icon: BarChart3 },
-    { id: 'schedule', name: 'Schedule Interview', icon: Calendar },
+    { id: 'interviews', name: 'Scheduled Interviews', icon: Calendar },
+    { id: 'schedule', name: 'Schedule Interview', icon: Plus },
     { id: 'candidates', name: 'Candidates', icon: Users },
     { id: 'reports', name: 'Reports', icon: FileText },
   ];
@@ -43,6 +44,8 @@ const AdminPanel: React.FC = () => {
     switch (activeTab) {
       case 'dashboard':
         return <DashboardTab stats={adminData.stats} />;
+      case 'interviews':
+        return <ScheduledInterviewsTab interviews={interviews} />;
       case 'schedule':
         return <ScheduleInterviewTab />;
       case 'candidates':
@@ -227,6 +230,306 @@ const DashboardTab: React.FC<{ stats: any }> = ({ stats }) => {
                 <p className="text-xs text-gray-500">6 hours ago</p>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Scheduled Interviews Tab Component
+const ScheduledInterviewsTab: React.FC<{ interviews: Interview[] }> = ({ interviews }) => {
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredInterviews = interviews.filter(interview => {
+    const matchesSearch = interview.candidateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         interview.candidateEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         interview.interviewerName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || interview.status === statusFilter;
+    const matchesType = typeFilter === 'all' || interview.type === typeFilter;
+    return matchesSearch && matchesStatus && matchesType;
+  });
+
+  const sortedInterviews = filteredInterviews.sort((a, b) => 
+    new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime()
+  );
+
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString('en-US', { 
+        weekday: 'short',
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+      }),
+      time: date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      })
+    };
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'scheduled':
+        return 'bg-blue-100 text-blue-800';
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      case 'rescheduled':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'technical':
+        return 'bg-purple-100 text-purple-800';
+      case 'behavioral':
+        return 'bg-orange-100 text-orange-800';
+      case 'system_design':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'cultural_fit':
+        return 'bg-pink-100 text-pink-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const handleStatusChange = (interviewId: string, newStatus: string) => {
+    db.updateInterview(interviewId, { status: newStatus as any });
+    // Refresh page to reflect changes
+    window.location.reload();
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">Scheduled Interviews</h2>
+        <div className="text-sm text-gray-600">
+          Total: {sortedInterviews.length} interviews
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search candidates or interviewers..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Status</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="rescheduled">Rescheduled</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Types</option>
+              <option value="technical">Technical</option>
+              <option value="behavioral">Behavioral</option>
+              <option value="system_design">System Design</option>
+              <option value="cultural_fit">Cultural Fit</option>
+            </select>
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setStatusFilter('all');
+                setTypeFilter('all');
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Interviews Table */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Candidate
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Position
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Interviewer
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date & Time
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Duration
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Format
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {sortedInterviews.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                    <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p>No interviews found matching your criteria.</p>
+                  </td>
+                </tr>
+              ) : (
+                sortedInterviews.map((interview) => {
+                  const { date, time } = formatDateTime(interview.scheduledDate);
+                  const isUpcoming = new Date(interview.scheduledDate) > new Date();
+                  
+                  return (
+                    <tr key={interview.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{interview.candidateName}</div>
+                          <div className="text-sm text-gray-500">{interview.candidateEmail}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{interview.position}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{interview.interviewerName}</div>
+                          <div className="text-sm text-gray-500">{interview.interviewerEmail}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{date}</div>
+                          <div className="text-sm text-gray-500">{time}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{interview.duration} min</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(interview.type)}`}>
+                          {interview.type.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900 capitalize">
+                          {interview.format.replace('_', ' ')}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(interview.status)}`}>
+                          {interview.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <div className="flex space-x-2">
+                          {interview.status === 'scheduled' && isUpcoming && (
+                            <button
+                              onClick={() => handleStatusChange(interview.id, 'completed')}
+                              className="text-green-600 hover:text-green-900 transition-colors"
+                              title="Mark as completed"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                            </button>
+                          )}
+                          {interview.meetingLink && (
+                            <button
+                              onClick={() => window.open(interview.meetingLink!, '_blank')}
+                              className="text-blue-600 hover:text-blue-900 transition-colors"
+                              title="Join meeting"
+                            >
+                              <Calendar className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Summary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="text-sm font-medium text-blue-900">Scheduled Today</div>
+          <div className="text-2xl font-bold text-blue-900">
+            {interviews.filter(i => {
+              const today = new Date().toDateString();
+              return new Date(i.scheduledDate).toDateString() === today && i.status === 'scheduled';
+            }).length}
+          </div>
+        </div>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="text-sm font-medium text-yellow-900">This Week</div>
+          <div className="text-2xl font-bold text-yellow-900">
+            {interviews.filter(i => {
+              const now = new Date();
+              const weekFromNow = new Date();
+              weekFromNow.setDate(now.getDate() + 7);
+              const interviewDate = new Date(i.scheduledDate);
+              return interviewDate >= now && interviewDate <= weekFromNow && i.status === 'scheduled';
+            }).length}
+          </div>
+        </div>
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="text-sm font-medium text-green-900">Completed</div>
+          <div className="text-2xl font-bold text-green-900">
+            {interviews.filter(i => i.status === 'completed').length}
+          </div>
+        </div>
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+          <div className="text-sm font-medium text-purple-900">Total Scheduled</div>
+          <div className="text-2xl font-bold text-purple-900">
+            {interviews.filter(i => i.status === 'scheduled').length}
           </div>
         </div>
       </div>

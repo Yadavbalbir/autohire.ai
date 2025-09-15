@@ -1,1 +1,117 @@
-[]
+[
+  {
+    "id": "int_1_sample",
+    "candidateId": "candidate_1",
+    "candidateName": "John Doe",
+    "candidateEmail": "john.doe@example.com",
+    "position": "Frontend Developer",
+    "interviewerName": "Sarah Johnson",
+    "interviewerEmail": "sarah.johnson@company.com",
+    "scheduledDate": "2025-09-20T10:00:00Z",
+    "duration": 60,
+    "type": "technical",
+    "format": "video_call",
+    "status": "scheduled",
+    "meetingLink": "https://meet.google.com/abc-def-ghi",
+    "notes": "Technical interview focusing on React and JavaScript fundamentals",
+    "createdAt": "2025-09-15T09:00:00Z",
+    "updatedAt": "2025-09-15T09:00:00Z",
+    "reminders": {
+      "candidate": true,
+      "interviewer": true,
+      "reminderSent": false
+    }
+  },
+  {
+    "id": "int_2_sample",
+    "candidateId": "candidate_2",
+    "candidateName": "Jane Smith",
+    "candidateEmail": "jane.smith@example.com",
+    "position": "Full Stack Developer",
+    "interviewerName": "Mike Chen",
+    "interviewerEmail": "mike.chen@company.com",
+    "scheduledDate": "2025-09-18T14:30:00Z",
+    "duration": 90,
+    "type": "system_design",
+    "format": "video_call",
+    "status": "scheduled",
+    "meetingLink": "https://meet.google.com/xyz-abc-def",
+    "notes": "System design interview for senior position",
+    "createdAt": "2025-09-15T10:00:00Z",
+    "updatedAt": "2025-09-15T10:00:00Z",
+    "reminders": {
+      "candidate": true,
+      "interviewer": true,
+      "reminderSent": false
+    }
+  },
+  {
+    "id": "int_3_sample",
+    "candidateId": "candidate_1",
+    "candidateName": "John Doe",
+    "candidateEmail": "john.doe@example.com",
+    "position": "Frontend Developer",
+    "interviewerName": "Emily Davis",
+    "interviewerEmail": "emily.davis@company.com",
+    "scheduledDate": "2025-09-25T15:00:00Z",
+    "duration": 45,
+    "type": "behavioral",
+    "format": "video_call",
+    "status": "scheduled",
+    "meetingLink": "https://meet.google.com/behavioral-123",
+    "notes": "Behavioral interview to assess cultural fit",
+    "createdAt": "2025-09-15T11:00:00Z",
+    "updatedAt": "2025-09-15T11:00:00Z",
+    "reminders": {
+      "candidate": true,
+      "interviewer": true,
+      "reminderSent": false
+    }
+  },
+  {
+    "id": "int_4_completed",
+    "candidateId": "candidate_1",
+    "candidateName": "John Doe",
+    "candidateEmail": "john.doe@example.com",
+    "position": "Frontend Developer",
+    "interviewerName": "Alex Wilson",
+    "interviewerEmail": "alex.wilson@company.com",
+    "scheduledDate": "2025-09-10T11:00:00Z",
+    "duration": 60,
+    "type": "technical",
+    "format": "video_call",
+    "status": "completed",
+    "meetingLink": "https://meet.google.com/completed-interview",
+    "notes": "Initial technical screening - passed with good score",
+    "createdAt": "2025-09-08T09:00:00Z",
+    "updatedAt": "2025-09-10T12:00:00Z",
+    "reminders": {
+      "candidate": true,
+      "interviewer": true,
+      "reminderSent": true
+    }
+  },
+  {
+    "id": "int_5_completed",
+    "candidateId": "candidate_2",
+    "candidateName": "Jane Smith",
+    "candidateEmail": "jane.smith@example.com",
+    "position": "Full Stack Developer",
+    "interviewerName": "Lisa Brown",
+    "interviewerEmail": "lisa.brown@company.com",
+    "scheduledDate": "2025-09-12T09:30:00Z",
+    "duration": 75,
+    "type": "technical",
+    "format": "video_call",
+    "status": "completed",
+    "meetingLink": "https://meet.google.com/jane-technical",
+    "notes": "Excellent performance on coding challenges",
+    "createdAt": "2025-09-10T08:00:00Z",
+    "updatedAt": "2025-09-12T11:00:00Z",
+    "reminders": {
+      "candidate": true,
+      "interviewer": true,
+      "reminderSent": true
+    }
+  }
+]

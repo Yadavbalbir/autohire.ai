@@ -1,1 +1,42 @@
-[]
+[
+  {
+    "id": "candidate_1",
+    "email": "john.doe@example.com",
+    "name": "John Doe",
+    "phone": "+1-234-567-8900",
+    "position": "Frontend Developer",
+    "experience": "3 years",
+    "skills": ["React", "JavaScript", "TypeScript", "CSS", "HTML"],
+    "resume": "https://example.com/resumes/john-doe.pdf",
+    "status": "active",
+    "appliedDate": "2025-09-10T09:00:00Z",
+    "lastActivity": "2025-09-15T14:30:00Z",
+    "practiceScores": {
+      "totalSessions": 5,
+      "averageScore": 82,
+      "completedProblems": 8,
+      "bestScore": 95
+    },
+    "notes": "Strong frontend skills, good communication"
+  },
+  {
+    "id": "candidate_2",
+    "email": "jane.smith@example.com",
+    "name": "Jane Smith",
+    "phone": "+1-234-567-8901",
+    "position": "Full Stack Developer",
+    "experience": "5 years",
+    "skills": ["React", "Node.js", "Python", "PostgreSQL", "AWS"],
+    "resume": "https://example.com/resumes/jane-smith.pdf",
+    "status": "active",
+    "appliedDate": "2025-09-12T10:00:00Z",
+    "lastActivity": "2025-09-15T16:00:00Z",
+    "practiceScores": {
+      "totalSessions": 12,
+      "averageScore": 89,
+      "completedProblems": 15,
+      "bestScore": 98
+    },
+    "notes": "Excellent technical skills, system design experience"
+  }
+]
