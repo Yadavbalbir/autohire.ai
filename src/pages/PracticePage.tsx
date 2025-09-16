@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
+import { ProctoringProvider } from '../proctoring/ProctoringProvider';
+import { useProctoring } from '../proctoring/useProctoring';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Play, Clock, CheckCircle, Code, Lightbulb } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import db, { type Problem } from '../database';
 
-const PracticePage: React.FC = () => {
+const PracticePageContent: React.FC = () => {
+  // For testing: show proctoring event log
+  const { eventLog } = useProctoring();
   const [selectedProblem, setSelectedProblem] = useState<Problem | null>(null);
   const [code, setCode] = useState('// Write your solution here\n');
   const [isRunning, setIsRunning] = useState(false);
@@ -46,6 +50,17 @@ const PracticePage: React.FC = () => {
   if (selectedProblem) {
     return (
       <div className="min-h-screen bg-gray-50">
+        {/* Proctoring Event Log (for testing) */}
+        <div className="fixed top-2 right-2 bg-white border border-gray-200 rounded shadow p-2 z-50 max-w-xs text-xs">
+          <div className="font-bold mb-1">Proctoring Log</div>
+          <div className="max-h-40 overflow-y-auto">
+            {eventLog.map((e, i) => (
+              <div key={i} className="mb-1">
+                <span className="font-mono">[{new Date(e.timestamp).toLocaleTimeString()}]</span> {e.type}
+              </div>
+            ))}
+          </div>
+        </div>
         {/* Header */}
         <div className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -163,6 +178,17 @@ const PracticePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Proctoring Event Log (for testing) */}
+      <div className="fixed top-2 right-2 bg-white border border-gray-200 rounded shadow p-2 z-50 max-w-xs text-xs">
+        <div className="font-bold mb-1">Proctoring Log</div>
+        <div className="max-h-40 overflow-y-auto">
+          {eventLog.map((e, i) => (
+            <div key={i} className="mb-1">
+              <span className="font-mono">[{new Date(e.timestamp).toLocaleTimeString()}]</span> {e.type}
+            </div>
+          ))}
+        </div>
+      </div>
       {/* Header */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
@@ -273,5 +299,11 @@ const PracticePage: React.FC = () => {
     </div>
   );
 };
+
+const PracticePage: React.FC = () => (
+  <ProctoringProvider>
+    <PracticePageContent />
+  </ProctoringProvider>
+);
 
 export default PracticePage;
