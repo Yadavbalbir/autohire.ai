@@ -17,7 +17,8 @@ import {
 } from 'lucide-react';
 import { db } from '../database';
 import type { Interview } from '../database';
-import { PreInterviewCheck, AIAgent, CodeEditor, Whiteboard } from '../components';
+import { PreInterviewCheck, AIAgent, CodeEditor } from '../components';
+import Whiteboard from '../components/Whiteboard';
 import { useFullScreen } from '../hooks/useFullScreen';
 
 type InterviewMode = 'discussion' | 'coding' | 'whiteboard';
@@ -250,7 +251,8 @@ const InterviewPage: React.FC = () => {
     cleanupVideoStream();
     // Exit full screen when interview ends
     exitFullScreen();
-    navigate('/dashboard');
+    // Navigate to post-interview summary
+    navigate(`/interview/${interviewId}/summary`);
   };
 
   const handleModeChange = (newMode: InterviewMode) => {

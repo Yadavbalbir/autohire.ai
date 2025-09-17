@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   BarChart3, 
@@ -13,10 +14,12 @@ import {
   UserCheck,
   Plus,
   Search,
-  Filter
+  Filter,
+  Eye
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import db, { type Candidate, type Interview } from '../database';
+import { InterviewDetailsModal } from '../components';
 
 const AdminPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -27,10 +30,39 @@ const AdminPanel: React.FC = () => {
 
   useEffect(() => {
     // Load data from database
+    const loadData = () => {
+      setCandidates(db.getCandidates());
+      setInterviews(db.getInterviews());
+      setAdminData(db.getAdminData());
+    };
+    
+    loadData();
+    
+    // Check if we need to sync data from updated JSON files
+    const candidatesData = db.getCandidates();
+    const interviewsData = db.getInterviews();
+    
+    // If we detect old mock data, force reload
+    const hasOldMockData = candidatesData.some(c => 
+      c.email === 'john.doe@example.com' || c.email === 'jane.smith@example.com'
+    ) || interviewsData.some(i => 
+      i.interviewerName !== 'AI Agent' && !i.interviewerName.includes('AI Agent')
+    );
+    
+    if (hasOldMockData) {
+      console.log('Detected old data in admin panel, forcing sync...');
+      db.forceReloadFromJSON();
+      loadData();
+    }
+  }, []);
+
+  const refreshData = () => {
+    db.forceReloadFromJSON();
     setCandidates(db.getCandidates());
     setInterviews(db.getInterviews());
     setAdminData(db.getAdminData());
-  }, []);
+    console.log('Data refreshed from JSON files');
+  };
 
   const tabs = [
     { id: 'dashboard', name: 'Dashboard', icon: BarChart3 },
@@ -43,7 +75,7 @@ const AdminPanel: React.FC = () => {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardTab stats={adminData.stats} />;
+        return <DashboardTab stats={adminData.stats} onRefresh={refreshData} />;
       case 'interviews':
         return <ScheduledInterviewsTab interviews={interviews} />;
       case 'schedule':
@@ -53,7 +85,7 @@ const AdminPanel: React.FC = () => {
       case 'reports':
         return <ReportsTab interviews={interviews} />;
       default:
-        return <DashboardTab stats={adminData.stats} />;
+        return <DashboardTab stats={adminData.stats} onRefresh={refreshData} />;
     }
   };
 
@@ -140,10 +172,21 @@ const AdminPanel: React.FC = () => {
 };
 
 // Dashboard Tab Component
-const DashboardTab: React.FC<{ stats: any }> = ({ stats }) => {
+const DashboardTab: React.FC<{ stats: any; onRefresh: () => void }> = ({ stats, onRefresh }) => {
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
+        <button
+          onClick={onRefresh}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Refresh Data
+        </button>
+      </div>
       
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -239,9 +282,12 @@ const DashboardTab: React.FC<{ stats: any }> = ({ stats }) => {
 
 // Scheduled Interviews Tab Component
 const ScheduledInterviewsTab: React.FC<{ interviews: Interview[] }> = ({ interviews }) => {
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const filteredInterviews = interviews.filter(interview => {
     const matchesSearch = interview.candidateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -307,6 +353,24 @@ const ScheduledInterviewsTab: React.FC<{ interviews: Interview[] }> = ({ intervi
     db.updateInterview(interviewId, { status: newStatus as any });
     // Refresh page to reflect changes
     window.location.reload();
+  };
+
+  const handleViewDetails = (interview: Interview) => {
+    setSelectedInterview(interview);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedInterview(null);
+  };
+
+  const handleStartInterview = () => {
+    if (selectedInterview) {
+      navigate(`/interview/${selectedInterview.id}`);
+      setIsModalOpen(false);
+      setSelectedInterview(null);
+    }
   };
 
   return (
@@ -477,15 +541,13 @@ const ScheduledInterviewsTab: React.FC<{ interviews: Interview[] }> = ({ intervi
                               <CheckCircle className="w-4 h-4" />
                             </button>
                           )}
-                          {interview.meetingLink && (
-                            <button
-                              onClick={() => window.open(interview.meetingLink!, '_blank')}
-                              className="text-blue-600 hover:text-blue-900 transition-colors"
-                              title="Join meeting"
-                            >
-                              <Calendar className="w-4 h-4" />
-                            </button>
-                          )}
+                          <button
+                            onClick={() => handleViewDetails(interview)}
+                            className="text-blue-600 hover:text-blue-900 transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -533,6 +595,15 @@ const ScheduledInterviewsTab: React.FC<{ interviews: Interview[] }> = ({ intervi
           </div>
         </div>
       </div>
+
+      {/* Interview Details Modal */}
+      <InterviewDetailsModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        interview={selectedInterview}
+        onStartInterview={handleStartInterview}
+        showStartButton={false}
+      />
     </div>
   );
 };
@@ -571,7 +642,6 @@ const ScheduleInterviewTab: React.FC = () => {
         type: formData.type,
         format: 'video_call' as const,
         status: 'scheduled' as const,
-        meetingLink: null,
         notes: formData.notes,
         reminders: {
           candidate: false,
@@ -691,6 +761,8 @@ const CandidatesTab: React.FC<{ candidates: Candidate[] }> = ({ candidates }) =>
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [newCandidate, setNewCandidate] = useState({
     name: '',
     email: '',
@@ -734,6 +806,16 @@ const CandidatesTab: React.FC<{ candidates: Candidate[] }> = ({ candidates }) =>
     
     // Refresh page to show new candidate
     window.location.reload();
+  };
+
+  const handleViewProfile = (candidate: Candidate) => {
+    setSelectedCandidate(candidate);
+    setShowProfileModal(true);
+  };
+
+  const closeProfileModal = () => {
+    setShowProfileModal(false);
+    setSelectedCandidate(null);
   };
 
   const filteredCandidates = candidates.filter(candidate => {
@@ -900,6 +982,9 @@ const CandidatesTab: React.FC<{ candidates: Candidate[] }> = ({ candidates }) =>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Score
               </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -927,11 +1012,237 @@ const CandidatesTab: React.FC<{ candidates: Candidate[] }> = ({ candidates }) =>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {candidate.practiceScores?.averageScore ? `${candidate.practiceScores.averageScore}%` : 'N/A'}
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <button
+                    onClick={() => handleViewProfile(candidate)}
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
+                  >
+                    <Users className="w-4 h-4" />
+                    View Profile
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Candidate Profile Modal */}
+      {showProfileModal && selectedCandidate && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm"
+          onClick={closeProfileModal}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header with Gradient */}
+            <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 px-8 py-6 text-white relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20"></div>
+              <div className="relative flex justify-between items-start">
+                <div>
+                  <h3 className="text-2xl font-bold mb-2">{selectedCandidate.name}</h3>
+                  <p className="text-blue-100 text-lg">{selectedCandidate.position}</p>
+                  <div className="flex items-center mt-2">
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      selectedCandidate.status === 'active' ? 'bg-green-500/20 text-green-200 border border-green-400/30' :
+                      selectedCandidate.status === 'inactive' ? 'bg-yellow-500/20 text-yellow-200 border border-yellow-400/30' :
+                      selectedCandidate.status === 'hired' ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/30' :
+                      'bg-gray-500/20 text-gray-200 border border-gray-400/30'
+                    }`}>
+                      {selectedCandidate.status.charAt(0).toUpperCase() + selectedCandidate.status.slice(1)}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={closeProfileModal}
+                  className="text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 p-2 rounded-full"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
+              <div className="p-8 space-y-8">
+                {/* Contact Information Card */}
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                      <Users className="w-4 h-4 text-blue-600" />
+                    </div>
+                    Contact Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-gray-600">Email Address</label>
+                      <p className="text-gray-900 font-medium bg-white px-3 py-2 rounded-lg border">{selectedCandidate.email}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-gray-600">Phone Number</label>
+                      <p className="text-gray-900 font-medium bg-white px-3 py-2 rounded-lg border">{selectedCandidate.phone}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-gray-600">Experience Level</label>
+                      <p className="text-gray-900 font-medium bg-white px-3 py-2 rounded-lg border">{selectedCandidate.experience}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-gray-600">Resume</label>
+                      <a
+                        href={selectedCandidate.resume}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-3 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 font-medium text-sm"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        View Resume
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Skills Card */}
+                <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-6 border border-purple-200">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                      <Shield className="w-4 h-4 text-purple-600" />
+                    </div>
+                    Technical Skills
+                  </h4>
+                  <div className="flex flex-wrap gap-3">
+                    {selectedCandidate.skills.map((skill, index) => (
+                      <span
+                        key={index}
+                        className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:shadow-xl transition-shadow duration-200"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Performance Metrics Card */}
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                      <TrendingUp className="w-4 h-4 text-green-600" />
+                    </div>
+                    Performance Metrics
+                  </h4>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-white rounded-xl p-4 shadow-sm border border-green-100 text-center">
+                      <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <span className="text-white font-bold text-lg">{selectedCandidate.practiceScores.totalSessions}</span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-600">Total Sessions</p>
+                    </div>
+                    <div className="bg-white rounded-xl p-4 shadow-sm border border-green-100 text-center">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <span className="text-white font-bold text-sm">
+                          {selectedCandidate.practiceScores.averageScore > 0 ? `${selectedCandidate.practiceScores.averageScore}%` : 'N/A'}
+                        </span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-600">Average Score</p>
+                    </div>
+                    <div className="bg-white rounded-xl p-4 shadow-sm border border-green-100 text-center">
+                      <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <span className="text-white font-bold text-lg">{selectedCandidate.practiceScores.completedProblems}</span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-600">Problems Solved</p>
+                    </div>
+                    <div className="bg-white rounded-xl p-4 shadow-sm border border-green-100 text-center">
+                      <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <span className="text-white font-bold text-sm">
+                          {selectedCandidate.practiceScores.bestScore > 0 ? `${selectedCandidate.practiceScores.bestScore}%` : 'N/A'}
+                        </span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-600">Best Score</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Timeline Card */}
+                <div className="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-xl p-6 border border-orange-200">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                      <Clock className="w-4 h-4 text-orange-600" />
+                    </div>
+                    Timeline & Activity
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white rounded-lg p-4 border border-orange-100">
+                      <label className="block text-sm font-medium text-gray-600 mb-2">Application Date</label>
+                      <div className="flex items-center">
+                        <Calendar className="w-5 h-5 text-orange-500 mr-2" />
+                        <p className="text-gray-900 font-medium">
+                          {new Date(selectedCandidate.appliedDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-lg p-4 border border-orange-100">
+                      <label className="block text-sm font-medium text-gray-600 mb-2">Last Activity</label>
+                      <div className="flex items-center">
+                        <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+                        <p className="text-gray-900 font-medium">
+                          {new Date(selectedCandidate.lastActivity).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes Card */}
+                {selectedCandidate.notes && (
+                  <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-6 border border-indigo-200">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                      <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
+                        <FileText className="w-4 h-4 text-indigo-600" />
+                      </div>
+                      Additional Notes
+                    </h4>
+                    <div className="bg-white rounded-lg p-4 border border-indigo-100">
+                      <p className="text-gray-700 leading-relaxed">{selectedCandidate.notes}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer with Action Buttons */}
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-8 py-4 border-t border-gray-200 flex justify-end space-x-4">
+              <button
+                onClick={closeProfileModal}
+                className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                Close
+              </button>
+              <button
+                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+                onClick={() => {
+                  // This could open an edit form or perform other actions
+                  console.log('Schedule interview for:', selectedCandidate.name);
+                }}
+              >
+                Schedule Interview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

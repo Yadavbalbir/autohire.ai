@@ -42,3 +42,40 @@ export interface DashboardMetrics {
   completedInterviews: number;
   averageScore: number;
 }
+
+export interface InterviewPerformanceStats {
+  overallScore: number;
+  technicalScore: number;
+  behavioralScore: number;
+  codingScore: number;
+  systemDesignScore: number;
+  totalQuestions: number;
+  answeredQuestions: number;
+  timeSpent: number; // in minutes
+  averageResponseTime: number; // in seconds
+}
+
+export interface InterviewFeedback {
+  strengths: string[];
+  areasForImprovement: string[];
+  specificNotes: string[];
+  recommendation: 'Strong Hire' | 'Hire' | 'No Hire' | 'Strong No Hire';
+  nextRound?: string;
+}
+
+export interface PostInterviewData {
+  interviewId: string;
+  candidateName: string;
+  candidateEmail: string;
+  position: string;
+  interviewer: string;
+  date: string;
+  duration: number; // in minutes
+  performance: InterviewPerformanceStats;
+  feedback: InterviewFeedback;
+  nextSteps: {
+    timeline: string;
+    contact: string;
+    additionalInfo?: string;
+  };
+}
