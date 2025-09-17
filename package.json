@@ -10,12 +10,18 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "@three-ts/orbit-controls": "^1.4.7",
     "@types/react-router-dom": "^5.3.3",
+    "@types/three": "^0.180.0",
+    "canvas-confetti": "^1.9.3",
+    "fabric": "^6.7.1",
     "framer-motion": "^12.23.12",
     "lucide-react": "^0.544.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-router-dom": "^7.9.1"
+    "react-router-dom": "^7.9.1",
+    "three": "^0.180.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",

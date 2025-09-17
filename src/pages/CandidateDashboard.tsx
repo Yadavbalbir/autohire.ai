@@ -219,15 +219,24 @@ const CandidateDashboard: React.FC = () => {
                       </div>
                     </div>
 
-                    {interview.meetingLink && (
+                    <div className="flex gap-2">
+                      {interview.meetingLink && (
+                        <button
+                          onClick={() => window.open(interview.meetingLink!, '_blank')}
+                          className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                        >
+                          <Video className="w-4 h-4" />
+                          <span>Join Meeting</span>
+                        </button>
+                      )}
                       <button
-                        onClick={() => window.open(interview.meetingLink!, '_blank')}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                        onClick={() => navigate(`/interview/${interview.id}`)}
+                        className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
                       >
-                        <Video className="w-4 h-4" />
-                        <span>Join Meeting</span>
+                        <Play className="w-4 h-4" />
+                        <span>Start Interview</span>
                       </button>
-                    )}
+                    </div>
 
                     {interview.notes && (
                       <div className="mt-3 p-3 bg-gray-50 rounded-lg">
