@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -11,11 +11,14 @@ import {
   PenTool, 
   LogOut,
   Bot,
-  User
+  User,
+  Maximize,
+  Minimize
 } from 'lucide-react';
 import { db } from '../database';
 import type { Interview } from '../database';
-import { CandidateVideoFeed, AIAgent, CodeEditor, Whiteboard } from '../components';
+import { PreInterviewCheck, AIAgent, CodeEditor, Whiteboard } from '../components';
+import { useFullScreen } from '../hooks/useFullScreen';
 
 type InterviewMode = 'discussion' | 'coding' | 'whiteboard';
 
@@ -64,6 +67,7 @@ const mockQuestions: InterviewQuestion[] = [
 const InterviewPage: React.FC = () => {
   const { interviewId } = useParams<{ interviewId: string }>();
   const navigate = useNavigate();
+  const { isFullScreen, enterFullScreen, exitFullScreen, toggleFullScreen } = useFullScreen();
   
   // Interview state
   const [interview, setInterview] = useState<Interview | null>(null);
@@ -72,9 +76,17 @@ const InterviewPage: React.FC = () => {
   const [mode, setMode] = useState<InterviewMode>('discussion');
   const [agentSpeechText, setAgentSpeechText] = useState<string>('Hello! Welcome to your interview. I\'m your AI interviewer today.');
   
+  // Interview phases
+  const [interviewPhase, setInterviewPhase] = useState<'setup' | 'interview'>('setup');
+  
   // Video controls
   const [isCameraEnabled, setIsCameraEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  
+  // Video stream
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
+  const [videoError, setVideoError] = useState<string>('');
   
   // Load interview data
   useEffect(() => {
@@ -87,6 +99,80 @@ const InterviewPage: React.FC = () => {
       }
     }
   }, [interviewId, navigate]);
+
+  // Handle pre-interview check completion
+  const handlePreInterviewComplete = () => {
+    setInterviewPhase('interview');
+    // Enter full screen mode when interview starts
+    enterFullScreen();
+  };
+
+  // Handle pre-interview check error
+  const handlePreInterviewError = (error: string) => {
+    console.error('Pre-interview check error:', error);
+    // Could show toast notification or handle error appropriately
+  };
+
+  // Initialize video stream
+  const initializeVideoStream = async () => {
+    try {
+      setVideoError('');
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
+      setVideoStream(stream);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (error) {
+      console.error('Error accessing media devices:', error);
+      setVideoError('Unable to access camera/microphone');
+    }
+  };
+
+  // Clean up video stream
+  const cleanupVideoStream = () => {
+    if (videoStream) {
+      videoStream.getTracks().forEach(track => track.stop());
+      setVideoStream(null);
+    }
+  };
+
+  // Toggle camera
+  const toggleCamera = () => {
+    if (videoStream) {
+      const videoTrack = videoStream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsCameraEnabled(videoTrack.enabled);
+      }
+    }
+  };
+
+  // Toggle audio
+  const toggleAudio = () => {
+    if (videoStream) {
+      const audioTrack = videoStream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsAudioEnabled(audioTrack.enabled);
+      }
+    }
+  };
+
+  // Initialize video when entering interview phase
+  useEffect(() => {
+    if (interviewPhase === 'interview') {
+      initializeVideoStream();
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      cleanupVideoStream();
+    };
+  }, [interviewPhase]);
 
   // Simulate AI agent controlling question flow
   useEffect(() => {
@@ -115,6 +201,8 @@ const InterviewPage: React.FC = () => {
   }, [currentQuestionIndex]);
 
   const handleEndInterview = () => {
+    // Exit full screen when interview ends
+    exitFullScreen();
     navigate('/dashboard');
   };
 
@@ -133,6 +221,17 @@ const InterviewPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-white text-xl">Loading interview...</div>
+      </div>
+    );
+  }
+
+  // Show pre-interview check first
+  if (interviewPhase === 'setup') {
+    return (
+      <div className="min-h-screen bg-gray-900">
+        <PreInterviewCheck
+          onStartInterview={handlePreInterviewComplete}
+        />
       </div>
     );
   }
@@ -156,6 +255,13 @@ const InterviewPage: React.FC = () => {
           </div>
           
           <div className="flex items-center space-x-4">
+            <button
+              onClick={toggleFullScreen}
+              className="flex items-center space-x-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg transition-colors"
+              title={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
+            >
+              {isFullScreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+            </button>
             <div className="text-sm text-gray-400">
               Question {currentQuestionIndex + 1} of {mockQuestions.length}
             </div>
@@ -198,27 +304,55 @@ const InterviewPage: React.FC = () => {
 
               {/* Candidate Video - Small Square */}
               <div className="relative">
-                <div className="aspect-square bg-gray-800 rounded-lg overflow-hidden border-2 border-green-500">
-                  <CandidateVideoFeed 
-                    isEnabled={isCameraEnabled} 
-                    isAudioEnabled={isAudioEnabled}
-                  />
+                <div className="aspect-square bg-gray-800 rounded-lg overflow-hidden border-2 border-green-500 relative">
+                  {/* Candidate video feed */}
+                  {videoError ? (
+                    <div className="w-full h-full flex items-center justify-center bg-red-900/50">
+                      <div className="text-center text-red-400">
+                        <VideoOff className="w-12 h-12 mx-auto mb-2" />
+                        <p className="text-sm">{videoError}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover"
+                        style={{ transform: 'scaleX(-1)' }}
+                        onLoadedData={() => console.log('Video loaded successfully')}
+                      />
+                      
+                      {/* Live indicator */}
+                      <div className="absolute top-2 left-2 flex items-center space-x-1 bg-red-600 text-white px-2 py-1 rounded text-xs font-medium">
+                        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                        <span>LIVE</span>
+                      </div>
+                      
+                      {/* Quality indicator */}
+                      <div className="absolute top-2 right-2 bg-black/50 text-green-400 px-2 py-1 rounded text-xs">
+                        HD
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="absolute bottom-2 left-2 flex items-center space-x-1">
                   <User className="w-4 h-4 text-green-400" />
                   <span className="text-xs text-white font-medium">You</span>
                 </div>
                 {/* Video Controls */}
-                <div className="absolute top-2 right-2 flex space-x-1">
+                <div className="absolute bottom-2 right-2 flex space-x-1">
                   <button
-                    onClick={() => setIsCameraEnabled(!isCameraEnabled)}
-                    className={`p-1 rounded ${isCameraEnabled ? 'bg-green-600' : 'bg-red-600'} text-white`}
+                    onClick={toggleCamera}
+                    className={`p-1 rounded ${isCameraEnabled ? 'bg-green-600' : 'bg-red-600'} text-white hover:opacity-80 transition-opacity`}
                   >
                     {isCameraEnabled ? <Video className="w-3 h-3" /> : <VideoOff className="w-3 h-3" />}
                   </button>
                   <button
-                    onClick={() => setIsAudioEnabled(!isAudioEnabled)}
-                    className={`p-1 rounded ${isAudioEnabled ? 'bg-green-600' : 'bg-red-600'} text-white`}
+                    onClick={toggleAudio}
+                    className={`p-1 rounded ${isAudioEnabled ? 'bg-green-600' : 'bg-red-600'} text-white hover:opacity-80 transition-opacity`}
                   >
                     {isAudioEnabled ? <Mic className="w-3 h-3" /> : <MicOff className="w-3 h-3" />}
                   </button>
