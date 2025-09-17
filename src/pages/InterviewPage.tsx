@@ -107,12 +107,6 @@ const InterviewPage: React.FC = () => {
     enterFullScreen();
   };
 
-  // Handle pre-interview check error
-  const handlePreInterviewError = (error: string) => {
-    console.error('Pre-interview check error:', error);
-    // Could show toast notification or handle error appropriately
-  };
-
   // Initialize video stream
   const initializeVideoStream = async () => {
     try {
