@@ -584,7 +584,23 @@ const PreInterviewCheck: React.FC<PreInterviewCheckProps> = ({
                   )}
                   
                   <button
-                    onClick={onStartInterview}
+                    onClick={() => {
+                      // Clean up test streams before starting interview
+                      if (streamRef.current) {
+                        streamRef.current.getTracks().forEach(track => {
+                          track.stop();
+                          console.log('Stopped pre-interview test stream track:', track.kind);
+                        });
+                        streamRef.current = null;
+                      }
+                      if (audioContextRef.current) {
+                        audioContextRef.current.close();
+                      }
+                      if (animationFrameRef.current) {
+                        cancelAnimationFrame(animationFrameRef.current);
+                      }
+                      onStartInterview();
+                    }}
                     className="px-8 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center space-x-2 mx-auto"
                   >
                     <Play className="w-5 h-5" />

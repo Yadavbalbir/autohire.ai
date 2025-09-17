@@ -129,8 +129,24 @@ const InterviewPage: React.FC = () => {
   // Clean up video stream
   const cleanupVideoStream = () => {
     if (videoStream) {
-      videoStream.getTracks().forEach(track => track.stop());
+      console.log('Cleaning up video stream...');
+      videoStream.getTracks().forEach(track => {
+        track.stop();
+        console.log(`Stopped ${track.kind} track`);
+      });
       setVideoStream(null);
+      
+      // Clear video element source
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      
+      // Reset video states
+      setIsCameraEnabled(true);
+      setIsAudioEnabled(true);
+      setVideoError('');
+      
+      console.log('Video stream cleanup completed');
     }
   };
 
@@ -168,6 +184,41 @@ const InterviewPage: React.FC = () => {
     };
   }, [interviewPhase]);
 
+  // Comprehensive cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      // Ensure streams are always cleaned up when component unmounts
+      if (videoStream) {
+        videoStream.getTracks().forEach(track => {
+          track.stop();
+          console.log('Stopped track:', track.kind);
+        });
+      }
+    };
+  }, [videoStream]);
+
+  // Cleanup streams when user navigates away or closes tab
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      cleanupVideoStream();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        // Optionally pause streams when tab becomes hidden
+        console.log('Page became hidden, streams remain active');
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   // Simulate AI agent controlling question flow
   useEffect(() => {
     const questionTimer = setTimeout(() => {
@@ -195,6 +246,8 @@ const InterviewPage: React.FC = () => {
   }, [currentQuestionIndex]);
 
   const handleEndInterview = () => {
+    // Clean up video stream before ending interview
+    cleanupVideoStream();
     // Exit full screen when interview ends
     exitFullScreen();
     navigate('/dashboard');
