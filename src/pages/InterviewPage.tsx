@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import * as tf from '@tensorflow/tfjs';
+import '@tensorflow/tfjs-backend-webgl';
+import '@tensorflow-models/blazeface';
 import { 
   ArrowLeft, 
   Video, 
@@ -17,11 +20,19 @@ import {
 } from 'lucide-react';
 import { db } from '../database';
 import type { Interview } from '../database';
-import { PreInterviewCheck, AIAgent, CodeEditor } from '../components';
+import { PreInterviewCheck, AIAgent, CodeEditor, ToastContainer } from '../components';
 import Whiteboard from '../components/Whiteboard';
 import { useFullScreen } from '../hooks/useFullScreen';
+import faceDetectionLogger from '../utils/faceDetectionLogger';
 
 type InterviewMode = 'discussion' | 'coding' | 'whiteboard';
+
+interface ToastData {
+  id: string;
+  type: 'no-face' | 'multiple-faces';
+  message: string;
+  duration?: number;
+}
 
 interface InterviewQuestion {
   id: string;
@@ -86,8 +97,26 @@ const InterviewPage: React.FC = () => {
   
   // Video stream
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
   const [videoError, setVideoError] = useState<string>('');
+  
+  // Face detection
+  const blazeFaceModelRef = useRef<any>(null);
+  const faceDetectionIntervalRef = useRef<number | null>(null);
+  const [facesDetected, setFacesDetected] = useState(0);
+  const [faceDetectionActive, setFaceDetectionActive] = useState(false);
+  
+  // Face detection statistics
+  const noFaceDetectedCountRef = useRef<number>(0);
+  const multipleFacesDetectedCountRef = useRef<number>(0);
+  
+  // Toast notifications
+  const [toasts, setToasts] = useState<ToastData[]>([]);
+  const lastToastTimeRef = useRef<{ [key: string]: number }>({});
+  const detectionStartTimeRef = useRef<number>(0);
+  const TOAST_COOLDOWN = 3000; // 3 seconds between same type of toasts
+  const INITIAL_GRACE_PERIOD = 5000; // 5 seconds grace period after detection starts
   
   // Load interview data
   useEffect(() => {
@@ -108,18 +137,88 @@ const InterviewPage: React.FC = () => {
     enterFullScreen();
   };
 
+  // Toast notification helpers
+  const showToast = (type: 'no-face' | 'multiple-faces', message: string) => {
+    const now = Date.now();
+    
+    // Don't show toasts during initial grace period
+    if (detectionStartTimeRef.current > 0 && now - detectionStartTimeRef.current < INITIAL_GRACE_PERIOD) {
+      console.log(`🔕 Toast suppressed during grace period: ${type}`);
+      return;
+    }
+    
+    const lastTime = lastToastTimeRef.current[type] || 0;
+    
+    // Check if enough time has passed since last toast of this type
+    if (now - lastTime >= TOAST_COOLDOWN) {
+      const newToast: ToastData = {
+        id: `${type}-${now}`,
+        type,
+        message,
+        duration: 4000
+      };
+      
+      setToasts(prev => [...prev, newToast]);
+      lastToastTimeRef.current[type] = now;
+    }
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
+
   // Initialize video stream
   const initializeVideoStream = async () => {
     try {
       setVideoError('');
+      console.log('🎥 Requesting video stream...');
+      
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true
       });
       setVideoStream(stream);
+      console.log('🎥 Video stream obtained successfully');
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        console.log('🎥 Video stream assigned to video element');
+        
+        // Wait for video to be fully loaded and ready
+        const waitForVideoReady = async () => {
+          return new Promise<void>((resolve) => {
+            const checkVideo = () => {
+              if (videoRef.current && 
+                  videoRef.current.videoWidth > 0 && 
+                  videoRef.current.videoHeight > 0 &&
+                  videoRef.current.readyState >= 2) {
+                console.log(`🎥 Video ready: ${videoRef.current.videoWidth}x${videoRef.current.videoHeight}`);
+                resolve();
+              } else {
+                console.log('🎥 Video not ready yet, retrying...');
+                setTimeout(checkVideo, 100);
+              }
+            };
+            checkVideo();
+          });
+        };
+        
+        // Initialize face detection after video is fully ready
+        videoRef.current.onloadeddata = async () => {
+          console.log('🎥 Video onloadeddata event triggered');
+          await waitForVideoReady();
+          
+          console.log('🤖 Initializing face detection...');
+          const modelLoaded = await initializeFaceDetection();
+          
+          if (modelLoaded) {
+            console.log('🤖 Face detection model loaded, starting detection...');
+            // Wait a bit more to ensure everything is stable
+            setTimeout(() => {
+              startFaceDetection();
+            }, 1500);
+          }
+        };
       }
     } catch (error) {
       console.error('Error accessing media devices:', error);
@@ -142,6 +241,9 @@ const InterviewPage: React.FC = () => {
         videoRef.current.srcObject = null;
       }
       
+      // Stop face detection
+      stopFaceDetection();
+      
       // Reset video states
       setIsCameraEnabled(true);
       setIsAudioEnabled(true);
@@ -149,6 +251,285 @@ const InterviewPage: React.FC = () => {
       
       console.log('Video stream cleanup completed');
     }
+  };
+
+  // Initialize face detection model
+  const initializeFaceDetection = async () => {
+    try {
+      console.log('Loading BlazeFace model for interview page...');
+      faceDetectionLogger.logEvent({
+        event: 'model_loaded',
+        faceCount: 0,
+        message: 'Starting BlazeFace model loading for interview page',
+        page: 'interview'
+      });
+
+      await tf.ready();
+      const blazeface = await import('@tensorflow-models/blazeface');
+      const model = await blazeface.load();
+      
+      blazeFaceModelRef.current = model;
+      console.log('BlazeFace model loaded successfully for interview page');
+      
+      faceDetectionLogger.logEvent({
+        event: 'model_loaded',
+        faceCount: 0,
+        message: 'BlazeFace model loaded successfully for interview page',
+        page: 'interview'
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Failed to load BlazeFace model:', error);
+      faceDetectionLogger.logEvent({
+        event: 'model_failed',
+        faceCount: 0,
+        message: `Failed to load BlazeFace model: ${error}`,
+        page: 'interview'
+      });
+      return false;
+    }
+  };
+
+  // Face detection function with bounding boxes for interview page
+  const detectFaces = async () => {
+    console.log('🔍 detectFaces() called');
+    
+    if (!videoRef.current || !blazeFaceModelRef.current) {
+      console.log('🔍 Face detection skipped: Missing video ref or model');
+      return 0;
+    }
+
+    try {
+      // Check video dimensions
+      const videoWidth = videoRef.current.videoWidth;
+      const videoHeight = videoRef.current.videoHeight;
+      
+      if (videoWidth === 0 || videoHeight === 0) {
+        console.log(`🔍 Face detection skipped: Video not ready (${videoWidth}x${videoHeight})`);
+        return 0;
+      }
+      
+      console.log(`🔍 Running face detection on video (${videoWidth}x${videoHeight})`);
+
+      const predictions = await blazeFaceModelRef.current.estimateFaces(videoRef.current, false);
+      const faceCount = predictions.length;
+      setFacesDetected(faceCount);
+      
+      console.log(`🔍 Face detection result: ${faceCount} face(s) detected`);
+      
+      // Clear previous drawings
+      const canvas = canvasRef.current;
+      const video = videoRef.current;
+      
+      if (canvas && video) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          // Get the actual displayed size of the video element
+          const displayedWidth = video.offsetWidth;
+          const displayedHeight = video.offsetHeight;
+          
+          // Set canvas size to match the displayed video size (not the intrinsic video size)
+          canvas.width = displayedWidth;
+          canvas.height = displayedHeight;
+          canvas.style.width = displayedWidth + 'px';
+          canvas.style.height = displayedHeight + 'px';
+          
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          
+          console.log(`🎨 Canvas setup: ${canvas.width}x${canvas.height} (displayed video: ${displayedWidth}x${displayedHeight})`);
+          console.log(`🎨 Video intrinsic: ${video.videoWidth}x${video.videoHeight}`);
+          console.log(`🎨 Predictions to draw: ${predictions.length}`);
+          
+          // Calculate scaling factors
+          const scaleX = displayedWidth / video.videoWidth;
+          const scaleY = displayedHeight / video.videoHeight;
+          
+          console.log(`🎨 Scale factors: X=${scaleX.toFixed(2)}, Y=${scaleY.toFixed(2)}`);
+          
+          // Draw bounding boxes
+          if (predictions.length > 0) {
+            ctx.strokeStyle = faceCount === 1 ? '#10B981' : '#F59E0B';
+            ctx.lineWidth = 3; // Increased line width for visibility
+            ctx.font = '16px Arial'; // Increased font size
+            ctx.fillStyle = faceCount === 1 ? '#10B981' : '#F59E0B';
+            
+            console.log(`🎨 Drawing ${predictions.length} face boxes with color: ${ctx.strokeStyle}`);
+            
+            predictions.forEach((prediction: any, index: number) => {
+              const [x1, y1] = prediction.topLeft as [number, number];
+              const [x2, y2] = prediction.bottomRight as [number, number];
+              
+              // Scale coordinates to match displayed video size
+              const scaledX = x1 * scaleX;
+              const scaledY = y1 * scaleY;
+              const scaledWidth = (x2 - x1) * scaleX;
+              const scaledHeight = (y2 - y1) * scaleY;
+              
+              console.log(`🎨 Face ${index + 1} original: (${x1}, ${y1}, ${x2-x1}, ${y2-y1})`);
+              console.log(`🎨 Face ${index + 1} scaled: (${scaledX.toFixed(1)}, ${scaledY.toFixed(1)}, ${scaledWidth.toFixed(1)}, ${scaledHeight.toFixed(1)})`);
+              
+              // Draw rectangle
+              ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
+              
+              // Draw label background
+              const label = `Face ${index + 1}`;
+              const labelWidth = ctx.measureText(label).width;
+              
+              ctx.fillRect(scaledX, scaledY - 25, labelWidth + 10, 20); // Bigger label background
+              
+              // Save the current context state
+              ctx.save();
+              
+              // Apply horizontal flip transform to counter the video's flip
+              ctx.scale(-1, 1);
+              ctx.fillStyle = 'white';
+              
+              // Draw text with flipped coordinates (negative x coordinate due to scale(-1, 1))
+              ctx.fillText(label, -(scaledX + labelWidth + 5), scaledY - 10);
+              
+              // Restore the context state
+              ctx.restore();
+              
+              ctx.fillStyle = faceCount === 1 ? '#10B981' : '#F59E0B';
+            });
+            
+            console.log(`🎨 Canvas drawing completed for ${predictions.length} faces`);
+          } else {
+            console.log('🎨 No faces to draw');
+          }
+        } else {
+          console.log('🎨 Canvas context not available');
+        }
+      } else {
+        console.log('🎨 Canvas or video element not found');
+      }
+      
+      // Prepare bounding box data
+      const boundingBoxes = predictions.map((prediction: any) => ({
+        topLeft: prediction.topLeft as [number, number],
+        bottomRight: prediction.bottomRight as [number, number],
+        landmarks: prediction.landmarks as Array<[number, number]> | undefined
+      }));
+      
+      // Log detection events and show toasts
+      let event: 'no_face' | 'single_face' | 'multiple_faces';
+      let message: string;
+      
+      if (faceCount === 0) {
+        event = 'no_face';
+        message = 'No faces detected during interview';
+        noFaceDetectedCountRef.current += 1;
+        showToast('no-face', 'No face detected! Please ensure your face is visible to the camera.');
+      } else if (faceCount === 1) {
+        event = 'single_face';
+        message = 'Single face detected during interview';
+      } else {
+        event = 'multiple_faces';
+        message = `Multiple faces detected during interview: ${faceCount} faces`;
+        multipleFacesDetectedCountRef.current += 1;
+        showToast('multiple-faces', `Multiple faces detected (${faceCount})! Please ensure only one person is visible.`);
+      }
+      
+      faceDetectionLogger.logEvent({
+        event,
+        faceCount,
+        boundingBoxes: boundingBoxes.length > 0 ? boundingBoxes : undefined,
+        message,
+        page: 'interview'
+      });
+      
+      return faceCount;
+    } catch (error) {
+      console.error('Face detection error during interview:', error);
+      faceDetectionLogger.logEvent({
+        event: 'no_face',
+        faceCount: 0,
+        message: `Face detection error during interview: ${error}`,
+        page: 'interview'
+      });
+      return 0;
+    }
+  };
+
+  // Start continuous face detection for interview
+  const startFaceDetection = async () => {
+    if (faceDetectionActive || !blazeFaceModelRef.current) {
+      console.log('🔍 Face detection start skipped: already active or no model');
+      return;
+    }
+    
+    // Reset statistics counters when starting new detection session
+    noFaceDetectedCountRef.current = 0;
+    multipleFacesDetectedCountRef.current = 0;
+    console.log('📊 Face detection statistics counters reset');
+    
+    // Double-check video readiness before starting
+    if (!videoRef.current || 
+        videoRef.current.videoWidth === 0 || 
+        videoRef.current.videoHeight === 0) {
+      console.log('🔍 Face detection start failed: Video not ready');
+      console.log(`Video element exists: ${!!videoRef.current}`);
+      if (videoRef.current) {
+        console.log(`Video dimensions: ${videoRef.current.videoWidth}x${videoRef.current.videoHeight}`);
+        console.log(`Video ready state: ${videoRef.current.readyState}`);
+      }
+      return;
+    }
+    
+    console.log('🔍 Starting continuous face detection during interview...');
+    setFaceDetectionActive(true);
+    console.log('🔍 faceDetectionActive set to true');
+    detectionStartTimeRef.current = Date.now(); // Set grace period start time
+    
+    faceDetectionLogger.logEvent({
+      event: 'detection_started',
+      faceCount: 0,
+      message: 'Continuous face detection started during interview',
+      page: 'interview'
+    });
+    
+    faceDetectionIntervalRef.current = window.setInterval(async () => {
+      // Use ref instead of state to avoid closure issues
+      if (!faceDetectionIntervalRef.current) {
+        console.log('🔍 Detection interval skipped: interval was cleared');
+        return;
+      }
+      console.log('🔍 Running detection interval...');
+      await detectFaces();
+    }, 200); // Check every 200ms for smooth updates
+    
+    console.log('🔍 Face detection interval set up with ID:', faceDetectionIntervalRef.current);
+  };
+
+  // Stop face detection
+  const stopFaceDetection = () => {
+    console.log('🛑 stopFaceDetection() called - Stack trace:');
+    console.trace();
+    
+    if (faceDetectionIntervalRef.current) {
+      clearInterval(faceDetectionIntervalRef.current);
+      faceDetectionIntervalRef.current = null;
+    }
+    
+    setFaceDetectionActive(false);
+    
+    // Clear canvas
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      }
+    }
+    
+    faceDetectionLogger.logEvent({
+      event: 'detection_stopped',
+      faceCount: 0,
+      message: 'Face detection stopped during interview',
+      page: 'interview'
+    });
+    
+    console.log('Face detection stopped');
   };
 
   // Toggle camera
@@ -246,7 +627,37 @@ const InterviewPage: React.FC = () => {
     return () => clearTimeout(questionTimer);
   }, [currentQuestionIndex]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanupVideoStream();
+      stopFaceDetection();
+    };
+  }, []);
+
   const handleEndInterview = () => {
+    // Log face detection statistics before ending interview
+    const faceDetectionStats = {
+      noFaceDetectedCount: noFaceDetectedCountRef.current,
+      multipleFacesDetectedCount: multipleFacesDetectedCountRef.current
+    };
+    
+    console.log('📊 === INTERVIEW FACE DETECTION STATISTICS ===');
+    console.log(`📊 No face detected events: ${faceDetectionStats.noFaceDetectedCount}`);
+    console.log(`📊 Multiple faces detected events: ${faceDetectionStats.multipleFacesDetectedCount}`);
+    console.log('📊 ==========================================');
+    
+    // Log to face detection logger as well
+    faceDetectionLogger.logEvent({
+      event: 'interview_ended',
+      faceCount: 0,
+      message: `Interview ended - Statistics: No face: ${faceDetectionStats.noFaceDetectedCount}, Multiple faces: ${faceDetectionStats.multipleFacesDetectedCount}`,
+      page: 'interview',
+      boundingBoxes: undefined,
+      confidence: undefined,
+      additionalData: faceDetectionStats
+    });
+    
     // Clean up video stream before ending interview
     cleanupVideoStream();
     // Exit full screen when interview ends
@@ -287,6 +698,12 @@ const InterviewPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+      {/* Toast Container */}
+      <ToastContainer 
+        toasts={toasts}
+        onRemoveToast={removeToast}
+      />
+      
       {/* Header */}
       <div className="bg-gray-800 border-b border-gray-700 p-4">
         <div className="flex items-center justify-between">
@@ -374,10 +791,30 @@ const InterviewPage: React.FC = () => {
                         onLoadedData={() => console.log('Video loaded successfully')}
                       />
                       
+                      {/* Face detection canvas overlay */}
+                      <canvas
+                        ref={canvasRef}
+                        className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                        style={{ 
+                          transform: 'scaleX(-1)', 
+                          zIndex: 10,
+                          border: '2px solid red' // Temporary debugging border
+                        }}
+                      />
+                      
                       {/* Live indicator */}
                       <div className="absolute top-2 left-2 flex items-center space-x-1 bg-red-600 text-white px-2 py-1 rounded text-xs font-medium">
                         <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                         <span>LIVE</span>
+                      </div>
+                      
+                      {/* Face detection status */}
+                      <div className="absolute top-2 left-20 bg-black/50 text-white px-2 py-1 rounded text-xs">
+                        {faceDetectionActive ? 
+                          (facesDetected === 0 ? '❌ No Face' : 
+                           facesDetected === 1 ? '✅ Face Detected' : 
+                           `⚠️ ${facesDetected} Faces`) : 
+                          '⏸️ Detection Off'}
                       </div>
                       
                       {/* Quality indicator */}

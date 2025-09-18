@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "@tensorflow-models/blazeface": "^0.1.0",
+    "@tensorflow/tfjs": "^4.22.0",
     "@three-ts/orbit-controls": "^1.4.7",
     "@types/react-router-dom": "^5.3.3",
     "@types/three": "^0.180.0",
