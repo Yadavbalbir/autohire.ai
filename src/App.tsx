@@ -4,6 +4,8 @@ import LandingPage from './pages/LandingPage';
 import CandidateDashboard from './pages/CandidateDashboard';
 import AdminPanel from './pages/AdminPanel';
 import PracticePage from './pages/PracticePage';
+import InterviewPage from './pages/InterviewPage';
+import PostInterviewPage from './pages/PostInterviewPage';
 import { initializeDatabase } from './database/helpers';
 import './App.css';
 
@@ -63,6 +65,26 @@ const AppRouter: React.FC = () => {
           element={
             <ProtectedRoute>
               {isAdmin ? <Navigate to="/admin" replace /> : <PracticePage />}
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Interview Page */}
+        <Route
+          path="/interview/:interviewId"
+          element={
+            <ProtectedRoute>
+              {isAdmin ? <Navigate to="/admin" replace /> : <InterviewPage />}
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Post Interview Summary Page */}
+        <Route
+          path="/interview/:interviewId/summary"
+          element={
+            <ProtectedRoute>
+              {isAdmin ? <Navigate to="/admin" replace /> : <PostInterviewPage />}
             </ProtectedRoute>
           }
         />

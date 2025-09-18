@@ -49,7 +49,6 @@ export interface Interview {
   type: 'technical' | 'behavioral' | 'system_design' | 'cultural_fit';
   format: 'video_call' | 'phone_call' | 'in_person';
   status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
-  meetingLink?: string | null;
   notes: string;
   createdAt: string;
   updatedAt: string;
@@ -139,6 +138,37 @@ class LocalDatabase {
 
   constructor() {
     this.data = this.initializeDatabase();
+    
+    // Check if data needs to be synced
+    this.checkDataSync();
+  }
+
+  private checkDataSync(): void {
+    // If localStorage exists but the data seems outdated, force reload
+    const storedCandidates = localStorage.getItem(STORAGE_KEYS.CANDIDATES);
+    const storedInterviews = localStorage.getItem(STORAGE_KEYS.INTERVIEWS);
+    
+    if (storedCandidates && storedInterviews) {
+      try {
+        const candidatesInStorage = JSON.parse(storedCandidates);
+        const interviewsInStorage = JSON.parse(storedInterviews);
+        
+        // Check if the data structure matches our updated JSON files
+        const hasOldMockData = candidatesInStorage.some((c: any) => 
+          c.email === 'john.doe@example.com' || c.email === 'jane.smith@example.com'
+        ) || interviewsInStorage.some((i: any) => 
+          i.interviewerName !== 'AI Agent'
+        );
+        
+        if (hasOldMockData) {
+          console.log('Detected outdated data, forcing reload from JSON...');
+          this.forceReloadFromJSON();
+        }
+      } catch (error) {
+        console.warn('Error checking data sync, forcing reload:', error);
+        this.forceReloadFromJSON();
+      }
+    }
   }
 
   private initializeDatabase(): Database {
@@ -314,6 +344,27 @@ class LocalDatabase {
     this.data.adminData = { ...this.data.adminData, ...updates };
     this.saveToStorage(STORAGE_KEYS.ADMIN_DATA, this.data.adminData);
     return this.data.adminData;
+  }
+
+  // Force reload from JSON files (clears localStorage)
+  forceReloadFromJSON(): void {
+    // Clear all localStorage entries
+    Object.values(STORAGE_KEYS).forEach(key => {
+      localStorage.removeItem(key);
+    });
+    
+    // Reinitialize database from JSON files
+    this.data = this.initializeDatabase();
+    
+    // Recalculate and update stats
+    this.updateStats();
+    
+    console.log('Database reloaded from JSON files');
+  }
+
+  // Clear localStorage and reset to JSON data
+  resetDatabase(): void {
+    this.forceReloadFromJSON();
   }
 
   // Helper methods

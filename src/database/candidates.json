@@ -1,42 +1,82 @@
 [
   {
-    "id": "candidate_1",
-    "email": "john.doe@example.com",
-    "name": "John Doe",
-    "phone": "+1-234-567-8900",
-    "position": "Frontend Developer",
-    "experience": "3 years",
-    "skills": ["React", "JavaScript", "TypeScript", "CSS", "HTML"],
-    "resume": "https://example.com/resumes/john-doe.pdf",
+    "id": "candidate_balbir",
+    "email": "balbiryadav@microsoft.com",
+    "name": "Balbir Yadav",
+    "phone": "+1-425-000-0001",
+    "position": "Senior Software Engineer",
+    "experience": "8+ years",
+    "skills": ["Azure", "Cloud Architecture", "C#", ".NET", "Microservices", "DevOps"],
+    "resume": "https://autohire.ai/resumes/balbir-yadav.pdf",
     "status": "active",
-    "appliedDate": "2025-09-10T09:00:00Z",
-    "lastActivity": "2025-09-15T14:30:00Z",
+    "appliedDate": "2025-09-17T08:00:00Z",
+    "lastActivity": "2025-09-17T09:00:00Z",
     "practiceScores": {
-      "totalSessions": 5,
-      "averageScore": 82,
-      "completedProblems": 8,
-      "bestScore": 95
+      "totalSessions": 0,
+      "averageScore": 0,
+      "completedProblems": 0,
+      "bestScore": 0
     },
-    "notes": "Strong frontend skills, good communication"
+    "notes": "Experienced senior engineer with strong cloud architecture background"
   },
   {
-    "id": "candidate_2",
-    "email": "jane.smith@example.com",
-    "name": "Jane Smith",
-    "phone": "+1-234-567-8901",
-    "position": "Full Stack Developer",
-    "experience": "5 years",
-    "skills": ["React", "Node.js", "Python", "PostgreSQL", "AWS"],
-    "resume": "https://example.com/resumes/jane-smith.pdf",
+    "id": "candidate_harsh",
+    "email": "harsh@microsoft.com",
+    "name": "Harsh",
+    "phone": "+1-425-000-0002",
+    "position": "Software Development Engineer",
+    "experience": "5+ years",
+    "skills": ["JavaScript", "React", "Node.js", "Python", "Data Structures", "Algorithms"],
+    "resume": "https://autohire.ai/resumes/harsh.pdf",
     "status": "active",
-    "appliedDate": "2025-09-12T10:00:00Z",
-    "lastActivity": "2025-09-15T16:00:00Z",
+    "appliedDate": "2025-09-17T08:30:00Z",
+    "lastActivity": "2025-09-17T11:00:00Z",
     "practiceScores": {
-      "totalSessions": 12,
-      "averageScore": 89,
-      "completedProblems": 15,
-      "bestScore": 98
+      "totalSessions": 0,
+      "averageScore": 0,
+      "completedProblems": 0,
+      "bestScore": 0
     },
-    "notes": "Excellent technical skills, system design experience"
+    "notes": "Strong software development background with focus on problem-solving"
+  },
+  {
+    "id": "candidate_karthik",
+    "email": "kartdh@microsoft.com",
+    "name": "Karthikeyan Dhanakotti",
+    "phone": "+1-425-000-0003",
+    "position": "Principal Software Engineer",
+    "experience": "12+ years",
+    "skills": ["System Design", "Enterprise Architecture", "Leadership", "Mentoring", "Scalability"],
+    "resume": "https://autohire.ai/resumes/karthikeyan-dhanakotti.pdf",
+    "status": "active",
+    "appliedDate": "2025-09-17T09:00:00Z",
+    "lastActivity": "2025-09-17T13:00:00Z",
+    "practiceScores": {
+      "totalSessions": 0,
+      "averageScore": 0,
+      "completedProblems": 0,
+      "bestScore": 0
+    },
+    "notes": "Principal level engineer with extensive leadership and system design experience"
+  },
+  {
+    "id": "candidate_pragya",
+    "email": "prarathore@microsoft.com",
+    "name": "Pragya Rathore",
+    "phone": "+1-425-000-0004",
+    "position": "Senior Program Manager",
+    "experience": "7+ years",
+    "skills": ["Program Management", "Strategic Planning", "Cross-functional Collaboration", "Stakeholder Management"],
+    "resume": "https://autohire.ai/resumes/pragya-rathore.pdf",
+    "status": "active",
+    "appliedDate": "2025-09-17T09:30:00Z",
+    "lastActivity": "2025-09-17T15:00:00Z",
+    "practiceScores": {
+      "totalSessions": 0,
+      "averageScore": 0,
+      "completedProblems": 0,
+      "bestScore": 0
+    },
+    "notes": "Senior PM with strong strategic thinking and project delivery experience"
   }
 ]

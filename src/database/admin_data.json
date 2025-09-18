@@ -1,11 +1,11 @@
 {
   "stats": {
-    "totalCandidates": 0,
-    "activeInterviews": 0,
+    "totalCandidates": 4,
+    "activeInterviews": 12,
     "completedInterviews": 0,
     "totalPracticeSessions": 0,
     "averagePracticeScore": 0,
-    "lastUpdated": "2025-09-15T10:00:00Z"
+    "lastUpdated": "2025-09-17T16:00:00Z"
   },
   "settings": {
     "companyName": "AutoHire.ai",
@@ -18,7 +18,11 @@
       "technical",
       "behavioral", 
       "system_design",
-      "cultural_fit"
+      "cultural_fit",
+      "coding",
+      "program_management",
+      "strategic_thinking",
+      "leadership"
     ],
     "interviewFormats": [
       "video_call",
@@ -29,25 +33,11 @@
   },
   "interviewers": [
     {
-      "id": "interviewer_001",
-      "name": "Alice Smith",
-      "email": "alice.smith@company.com", 
-      "specializations": ["Frontend", "React", "JavaScript"],
-      "availability": "weekdays_9_5"
-    },
-    {
-      "id": "interviewer_002",
-      "name": "Bob Chen",
-      "email": "bob.chen@company.com",
-      "specializations": ["Full Stack", "System Design", "Node.js"],
-      "availability": "weekdays_10_6"
-    },
-    {
-      "id": "interviewer_003", 
-      "name": "Carol Davis",
-      "email": "carol.davis@company.com",
-      "specializations": ["Backend", "Java", "Architecture"],
-      "availability": "weekdays_8_4"
+      "id": "interviewer_ai",
+      "name": "AI Agent",
+      "email": "ai.agent@autohire.ai", 
+      "specializations": ["All Areas", "Technical", "Behavioral", "System Design", "Leadership"],
+      "availability": "24/7"
     }
   ]
 }

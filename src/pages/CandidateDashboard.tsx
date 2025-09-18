@@ -1,16 +1,19 @@
 import { motion } from 'framer-motion';
-import { Play, Zap, User, LogOut, Clock, Target, Calendar, Video, Phone, MapPin, AlertCircle } from 'lucide-react';
+import { Play, Zap, User, LogOut, Clock, Target, Calendar, Video, Phone, MapPin, AlertCircle, Eye } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { db } from '../database';
 import type { Interview } from '../database';
+import { InterviewDetailsModal } from '../components';
 
 const CandidateDashboard: React.FC = () => {
   const { session, logout } = useAuth();
   const navigate = useNavigate();
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -31,6 +34,24 @@ const CandidateDashboard: React.FC = () => {
   const handleQuickStart = () => {
     // Handle quick start functionality
     console.log('Starting quick session');
+  };
+
+  const handleViewDetails = (interview: Interview) => {
+    setSelectedInterview(interview);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedInterview(null);
+  };
+
+  const handleStartInterview = () => {
+    if (selectedInterview) {
+      navigate(`/interview/${selectedInterview.id}`);
+      setIsModalOpen(false);
+      setSelectedInterview(null);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -219,15 +240,22 @@ const CandidateDashboard: React.FC = () => {
                       </div>
                     </div>
 
-                    {interview.meetingLink && (
+                    <div className="flex gap-2">
                       <button
-                        onClick={() => window.open(interview.meetingLink!, '_blank')}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                        onClick={() => handleViewDetails(interview)}
+                        className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
                       >
-                        <Video className="w-4 h-4" />
-                        <span>Join Meeting</span>
+                        <Eye className="w-4 h-4" />
+                        <span>View Details</span>
                       </button>
-                    )}
+                      <button
+                        onClick={() => navigate(`/interview/${interview.id}`)}
+                        className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
+                      >
+                        <Play className="w-4 h-4" />
+                        <span>Start Interview</span>
+                      </button>
+                    </div>
 
                     {interview.notes && (
                       <div className="mt-3 p-3 bg-gray-50 rounded-lg">
@@ -369,6 +397,15 @@ const CandidateDashboard: React.FC = () => {
           </div>
         </motion.div>
       </main>
+
+      {/* Interview Details Modal */}
+      <InterviewDetailsModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        interview={selectedInterview}
+        onStartInterview={handleStartInterview}
+        showStartButton={true}
+      />
     </div>
   );
 };

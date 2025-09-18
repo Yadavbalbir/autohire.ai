@@ -67,14 +67,12 @@ export const scheduleInterview = (interviewData: {
   duration?: number;
   type: 'technical' | 'behavioral' | 'system_design' | 'cultural_fit';
   format: 'video_call' | 'phone_call' | 'in_person';
-  meetingLink?: string;
   notes?: string;
 }) => {
   const interview = db.addInterview({
     ...interviewData,
     duration: interviewData.duration || 60,
     status: 'scheduled' as const,
-    meetingLink: interviewData.meetingLink || null,
     notes: interviewData.notes || '',
     reminders: {
       candidate: true,
