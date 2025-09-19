@@ -35,6 +35,45 @@ const InterviewDetailsModal: React.FC<InterviewDetailsModalProps> = ({
 }) => {
   if (!interview) return null;
 
+  const canStartInterview = (dateString: string) => {
+    const interviewDate = new Date(dateString);
+    const now = new Date();
+    const timeDiff = interviewDate.getTime() - now.getTime();
+    const minutesDiff = timeDiff / (1000 * 60);
+    // Allow starting 5 minutes before scheduled time
+    return minutesDiff <= 5 && minutesDiff > -60; // Also allow up to 1 hour after scheduled time
+  };
+
+  const getTimeUntilStartAvailable = (dateString: string) => {
+    const interviewDate = new Date(dateString);
+    const startAvailableTime = new Date(interviewDate.getTime() - (5 * 60 * 1000)); // 5 minutes before
+    const now = new Date();
+    const timeDiff = startAvailableTime.getTime() - now.getTime();
+    
+    if (canStartInterview(dateString)) {
+      return { canStart: true, message: "Interview is ready to start!" };
+    }
+    
+    if (timeDiff <= 0) {
+      return { canStart: false, message: "Interview time has passed" };
+    }
+    
+    const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours > 0) {
+      return { 
+        canStart: false, 
+        message: `Available to start in ${hours}h ${minutes}m (5 minutes before scheduled time)` 
+      };
+    } else {
+      return { 
+        canStart: false, 
+        message: `Available to start in ${minutes} minutes (5 minutes before scheduled time)` 
+      };
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return {
@@ -279,6 +318,36 @@ const InterviewDetailsModal: React.FC<InterviewDetailsModalProps> = ({
                 </div>
               </motion.div>
 
+              {/* Interview Start Status */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+                className={`rounded-xl p-6 border ${
+                  getTimeUntilStartAvailable(interview.scheduledDate).canStart 
+                    ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-100'
+                    : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-100'
+                }`}
+              >
+                <div className="flex items-center space-x-2 mb-2">
+                  <Play className={`w-5 h-5 ${
+                    getTimeUntilStartAvailable(interview.scheduledDate).canStart ? 'text-green-600' : 'text-amber-600'
+                  }`} />
+                  <h3 className="text-lg font-semibold text-gray-900">Interview Status</h3>
+                </div>
+                <div className={`rounded-lg p-4 border ${
+                  getTimeUntilStartAvailable(interview.scheduledDate).canStart 
+                    ? 'bg-white border-green-200'
+                    : 'bg-white border-amber-200'
+                }`}>
+                  <p className={`text-sm font-medium ${
+                    getTimeUntilStartAvailable(interview.scheduledDate).canStart ? 'text-green-700' : 'text-amber-700'
+                  }`}>
+                    {getTimeUntilStartAvailable(interview.scheduledDate).message}
+                  </p>
+                </div>
+              </motion.div>
+
               {/* Interviewer Information */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -362,11 +431,17 @@ const InterviewDetailsModal: React.FC<InterviewDetailsModalProps> = ({
               </button>
               {showStartButton && interview.status === 'scheduled' && (
                 <button
-                  onClick={onStartInterview}
-                  className="flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium rounded-lg transition-all duration-200"
+                  onClick={canStartInterview(interview.scheduledDate) ? onStartInterview : undefined}
+                  disabled={!canStartInterview(interview.scheduledDate)}
+                  className={`flex items-center space-x-2 px-6 py-2 font-medium rounded-lg transition-all duration-200 ${
+                    canStartInterview(interview.scheduledDate)
+                      ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                  title={canStartInterview(interview.scheduledDate) ? 'Start Interview' : 'Interview can only be started 5 minutes before scheduled time'}
                 >
                   <Play className="w-4 h-4" />
-                  <span>Start Interview</span>
+                  <span>{canStartInterview(interview.scheduledDate) ? 'Start Interview' : 'Not Ready'}</span>
                 </button>
               )}
             </div>

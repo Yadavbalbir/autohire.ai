@@ -19,5 +19,6 @@ export interface ProctoringContextType {
   startScreenShare: () => Promise<void>;
   stopScreenShare: () => void;
   getEventLog: () => ProctoringEvent[];
+  clearProctoringEvents: () => void;
   isScreenSharing: boolean;
 }

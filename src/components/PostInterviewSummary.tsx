@@ -395,11 +395,110 @@ const PostInterviewSummary: React.FC<PostInterviewSummaryProps> = ({
               )}
             </motion.div>
 
+            {/* Proctoring & Face Detection Summary - Side by Side */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Proctoring Summary */}
+              <motion.div
+                initial={{ y: 50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.8, delay: 0.9 }}
+                className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-8"
+              >
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-red-400" />
+                  </div>
+                  <h3 className="text-xl md:text-2xl font-bold">Proctoring Summary</h3>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                  <div className="bg-gray-800/50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-2xl font-bold text-yellow-400">{interviewData.proctoring.tabSwitches}</div>
+                      <div className="text-xs text-gray-500 bg-gray-700/50 px-2 py-1 rounded">
+                        {Math.round(interviewData.proctoring.totalTabSwitchTime / 1000)}s away
+                      </div>
+                    </div>
+                    <div className="text-gray-400 text-sm">Tab Switches</div>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-2xl font-bold text-orange-400">{interviewData.proctoring.windowSwitches}</div>
+                      <div className="text-xs text-gray-500 bg-gray-700/50 px-2 py-1 rounded">
+                        {Math.round(interviewData.proctoring.totalWindowSwitchTime / 1000)}s away
+                      </div>
+                    </div>
+                    <div className="text-gray-400 text-sm">Window Switches</div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Face Detection Summary */}
+              <motion.div
+                initial={{ y: 50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.8, delay: 1.0 }}
+                className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-8"
+              >
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <Users className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <h3 className="text-xl md:text-2xl font-bold">Face Detection Summary</h3>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-gray-800/50 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-green-400">{interviewData.faceDetection.faceDetectedTime}%</div>
+                    <div className="text-gray-400 text-sm">Face Detected</div>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-red-400">{interviewData.faceDetection.noFaceTime}%</div>
+                    <div className="text-gray-400 text-sm">No Face</div>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-yellow-400">{interviewData.faceDetection.multipleFacesTime}%</div>
+                    <div className="text-gray-400 text-sm">Multiple Faces</div>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-blue-400">{interviewData.faceDetection.qualityScore}</div>
+                    <div className="text-gray-400 text-sm">Quality Score</div>
+                  </div>
+                </div>
+
+                <div className={`p-4 rounded-lg border ${
+                  interviewData.faceDetection.qualityScore >= 80 ? 'bg-green-900/20 border-green-500/20' :
+                  interviewData.faceDetection.qualityScore >= 60 ? 'bg-yellow-900/20 border-yellow-500/20' :
+                  'bg-red-900/20 border-red-500/20'
+                }`}>
+                  <div className="flex items-center space-x-2">
+                    {interviewData.faceDetection.qualityScore >= 80 ? (
+                      <CheckCircle className="w-5 h-5 text-green-400" />
+                    ) : (
+                      <AlertCircle className="w-5 h-5 text-yellow-400" />
+                    )}
+                    <span className={`font-medium ${
+                      interviewData.faceDetection.qualityScore >= 80 ? 'text-green-400' :
+                      interviewData.faceDetection.qualityScore >= 60 ? 'text-yellow-400' :
+                      'text-red-400'
+                    }`}>
+                      {interviewData.faceDetection.qualityScore >= 80 ? 'Excellent face detection quality' :
+                       interviewData.faceDetection.qualityScore >= 60 ? 'Good face detection quality' :
+                       'Face detection quality needs improvement'}
+                    </span>
+                  </div>
+                  <div className="text-gray-300 text-sm mt-2">
+                    Face was consistently detected {interviewData.faceDetection.faceDetectedTime}% of the interview time with {interviewData.faceDetection.totalEvents} total detection events.
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
             {/* Next Steps */}
             <motion.div
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.8 }}
+              transition={{ duration: 0.8, delay: 1.1 }}
               className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-8"
             >
               <div className="flex flex-col md:flex-row items-center justify-between mb-6 md:mb-8">

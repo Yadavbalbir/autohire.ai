@@ -291,8 +291,8 @@ const PreInterviewCheck: React.FC<PreInterviewCheckProps> = ({
           stopFaceDetection();
           
           setTimeout(() => {
-            console.log('Moving to step 3 (microphone test)');
-            setCurrentStep(3);
+            console.log('Face detection complete - Moving to step 3 (microphone test)');
+            setCurrentStep(3); // Go to microphone test
           }, 1000);
           return; // Exit the interval
         }
@@ -992,9 +992,20 @@ const PreInterviewCheck: React.FC<PreInterviewCheckProps> = ({
                   <h3 className="text-xl font-semibold text-green-800 mb-2">
                     System Check Complete!
                   </h3>
-                  <p className="text-green-600 mb-6">
+                  <p className="text-green-600 mb-4">
                     All devices are working properly. You're ready to start your interview.
                   </p>
+                  
+                  {/* Proctoring Notice */}
+                  <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-center justify-center space-x-2 mb-2">
+                      <User className="w-5 h-5 text-amber-600" />
+                      <span className="text-amber-800 font-medium">Session Monitoring</span>
+                    </div>
+                    <p className="text-sm text-amber-700">
+                      This interview session will be monitored for integrity. Please refrain from switching tabs or windows during the interview.
+                    </p>
+                  </div>
                   
                   {isFullScreenSupported && (
                     <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">

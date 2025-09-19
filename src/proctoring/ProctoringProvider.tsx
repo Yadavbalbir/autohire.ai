@@ -8,34 +8,79 @@ export const ProctoringProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const screenShareStream = useRef<MediaStream | null>(null);
 
-  // Helper to log events
+  // Always start with fresh events for each interview session
+  useEffect(() => {
+    const interviewId = getInterviewId();
+    // Clear any existing events for this interview
+    localStorage.removeItem(`proctoring_events_${interviewId}`);
+    setEventLog([]);
+  }, []);
+
+  // Clear all proctoring events for current interview
+  const clearProctoringEvents = () => {
+    const interviewId = getInterviewId();
+    setEventLog([]);
+    localStorage.removeItem(`proctoring_events_${interviewId}`);
+  };
+
+  // Get current interview ID from URL or generate one
+  const getInterviewId = () => {
+    const path = window.location.pathname;
+    const match = path.match(/\/interview\/([^\/]+)/);
+    return match ? match[1] : 'current_interview';
+  };
+
+  // Helper to log events and persist to localStorage
   const logEvent = (type: ProctoringEventType, details?: Record<string, any>) => {
-    setEventLog((prev) => [
-      ...prev,
-      { type, timestamp: Date.now(), details },
-    ]);
+    const newEvent = { type, timestamp: Date.now(), details };
+    console.log('🔍 Proctoring Event:', type, newEvent); // Enhanced debug logging
+    
+    setEventLog((prev) => {
+      const updated = [...prev, newEvent];
+      
+      // Persist to localStorage for post-interview analysis
+      const interviewId = getInterviewId();
+      try {
+        localStorage.setItem(`proctoring_events_${interviewId}`, JSON.stringify(updated));
+        console.log(`💾 Saved ${updated.length} proctoring events for interview ${interviewId}`);
+      } catch (error) {
+        console.warn('Failed to save proctoring events to localStorage:', error);
+      }
+      
+      return updated;
+    });
   };
 
   // Tab/Window focus/blur tracking
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === "hidden") {
+        console.log('📋 TAB_BLUR - User left interview tab');
         logEvent("TAB_BLUR");
       } else if (document.visibilityState === "visible") {
+        console.log('📋 TAB_FOCUS - User returned to interview tab');
         logEvent("TAB_FOCUS");
       }
     };
-    const handleWindowBlur = () => logEvent("WINDOW_BLUR");
-    const handleWindowFocus = () => logEvent("WINDOW_FOCUS");
+
+    // const handleWindowBlur = () => {
+    //   console.log('🪟 WINDOW_BLUR - User left interview window');
+    //   logEvent("WINDOW_BLUR");
+    // };
+    
+    // const handleWindowFocus = () => {
+    //   console.log('🪟 WINDOW_FOCUS - User returned to interview window');
+    //   logEvent("WINDOW_FOCUS");
+    // };
 
     document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("blur", handleWindowBlur);
-    window.addEventListener("focus", handleWindowFocus);
+    // window.addEventListener("blur", handleWindowBlur);
+    // window.addEventListener("focus", handleWindowFocus);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("blur", handleWindowBlur);
-      window.removeEventListener("focus", handleWindowFocus);
+      // window.removeEventListener("blur", handleWindowBlur);
+      // window.removeEventListener("focus", handleWindowFocus);
     };
   }, []);
 
@@ -77,6 +122,7 @@ export const ProctoringProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         startScreenShare,
         stopScreenShare,
         getEventLog,
+        clearProctoringEvents,
         isScreenSharing,
       }}
     >

@@ -1,4 +1,5 @@
 export { default as AnimatedBackground } from './AnimatedBackground';
+export { default as ProctoringStatus } from './ProctoringStatus';
 export { default as AIAgent } from './AIAgent';
 export { default as QuestionDisplay } from './QuestionDisplay';
 export { default as CodeEditor } from './CodeEditor';
