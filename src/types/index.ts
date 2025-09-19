@@ -63,6 +63,38 @@ export interface InterviewFeedback {
   nextRound?: string;
 }
 
+export interface ProctoringViolationSummary {
+  totalViolations: number;
+  highSeverity: number;
+  mediumSeverity: number;
+  lowSeverity: number;
+  tabSwitches: number;
+  windowSwitches: number;
+  screenShareStops: number;
+  totalTabSwitchTime: number; // Total milliseconds spent away from interview tab
+  totalWindowSwitchTime: number; // Total milliseconds spent away from interview window
+  violations: Array<{
+    type: string;
+    timestamp: number;
+    description: string;
+    severity: 'low' | 'medium' | 'high';
+  }>;
+}
+
+export interface FaceDetectionSummary {
+  totalEvents: number;
+  faceDetectedTime: number; // percentage of time face was detected
+  noFaceTime: number; // percentage of time no face detected
+  multipleFacesTime: number; // percentage of time multiple faces detected
+  qualityScore: number; // overall face detection quality (0-100)
+  events: Array<{
+    timestamp: number;
+    facesDetected: number;
+    confidence: number;
+    page: string;
+  }>;
+}
+
 export interface PostInterviewData {
   interviewId: string;
   candidateName: string;
@@ -73,6 +105,8 @@ export interface PostInterviewData {
   duration: number; // in minutes
   performance: InterviewPerformanceStats;
   feedback: InterviewFeedback;
+  proctoring: ProctoringViolationSummary;
+  faceDetection: FaceDetectionSummary;
   nextSteps: {
     timeline: string;
     contact: string;

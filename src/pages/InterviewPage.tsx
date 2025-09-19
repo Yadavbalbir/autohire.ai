@@ -16,14 +16,18 @@ import {
   Bot,
   User,
   Maximize,
-  Minimize
+  Minimize,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { db } from '../database';
 import type { Interview } from '../database';
 import { PreInterviewCheck, AIAgent, CodeEditor, ToastContainer } from '../components';
+import { ProctoringProvider } from '../proctoring/ProctoringProvider';
 import Whiteboard from '../components/Whiteboard';
 import { useFullScreen } from '../hooks/useFullScreen';
 import faceDetectionLogger from '../utils/faceDetectionLogger';
+import { aiInterviewerVoice, AI_INTERVIEWER_SCRIPTS } from '../utils/speechSynthesis';
 
 type InterviewMode = 'discussion' | 'coding' | 'whiteboard';
 
@@ -76,20 +80,48 @@ const mockQuestions: InterviewQuestion[] = [
   }
 ];
 
+// Main InterviewPage component with Proctoring Provider
 const InterviewPage: React.FC = () => {
   const { interviewId } = useParams<{ interviewId: string }>();
   const navigate = useNavigate();
   const { isFullScreen, enterFullScreen, exitFullScreen, toggleFullScreen } = useFullScreen();
   
+  return (
+    <ProctoringProvider>
+      <InterviewPageContent 
+        interviewId={interviewId}
+        navigate={navigate}
+        isFullScreen={isFullScreen}
+        enterFullScreen={enterFullScreen}
+        exitFullScreen={exitFullScreen}
+        toggleFullScreen={toggleFullScreen}
+      />
+    </ProctoringProvider>
+  );
+};
+
+// Content component that uses proctoring hooks
+const InterviewPageContent: React.FC<{
+  interviewId: string | undefined;
+  navigate: any;
+  isFullScreen: boolean;
+  enterFullScreen: () => void;
+  exitFullScreen: () => void;
+  toggleFullScreen: () => void;
+}> = ({ interviewId, navigate, isFullScreen, enterFullScreen, exitFullScreen, toggleFullScreen }) => {
   // Interview state
   const [interview, setInterview] = useState<Interview | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [currentQuestion, setCurrentQuestion] = useState<InterviewQuestion>(mockQuestions[0]);
   const [mode, setMode] = useState<InterviewMode>('discussion');
-  const [agentSpeechText, setAgentSpeechText] = useState<string>('Hello! Welcome to your interview. I\'m your AI interviewer today.');
   
   // Interview phases
   const [interviewPhase, setInterviewPhase] = useState<'setup' | 'interview'>('setup');
+  
+  // AI Voice state
+  const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
+  const [hasGivenIntroduction, setHasGivenIntroduction] = useState(false);
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   
   // Video controls
   const [isCameraEnabled, setIsCameraEnabled] = useState(true);
@@ -131,10 +163,42 @@ const InterviewPage: React.FC = () => {
   }, [interviewId, navigate]);
 
   // Handle pre-interview check completion
-  const handlePreInterviewComplete = () => {
+  const handlePreInterviewComplete = async () => {
     setInterviewPhase('interview');
     // Enter full screen mode when interview starts
     enterFullScreen();
+    
+    // Give AI interviewer introduction with voice
+    if (!hasGivenIntroduction) {
+      await giveVoiceIntroduction();
+      setHasGivenIntroduction(true);
+    }
+  };
+
+  // AI Voice Introduction
+  const giveVoiceIntroduction = async () => {
+    if (!isVoiceEnabled) return;
+    
+    const introScript = AI_INTERVIEWER_SCRIPTS.introduction[0];
+    
+    try {
+      setIsAgentSpeaking(true);
+      
+      // Speak the introduction
+      await aiInterviewerVoice.speak(introScript, {
+        rate: 0.9,
+        pitch: 1.0,
+        volume: 0.8,
+        onStart: () => setIsAgentSpeaking(true),
+        onEnd: () => {
+          setIsAgentSpeaking(false);
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error during voice introduction:', error);
+      setIsAgentSpeaking(false);
+    }
   };
 
   // Toast notification helpers
@@ -554,6 +618,18 @@ const InterviewPage: React.FC = () => {
     }
   };
 
+  // Toggle voice
+  const toggleVoice = () => {
+    const newVoiceState = !isVoiceEnabled;
+    setIsVoiceEnabled(newVoiceState);
+    
+    if (!newVoiceState) {
+      // Stop any current speech when voice is disabled
+      aiInterviewerVoice.stop();
+      setIsAgentSpeaking(false);
+    }
+  };
+
   // Initialize video when entering interview phase
   useEffect(() => {
     if (interviewPhase === 'interview') {
@@ -609,17 +685,17 @@ const InterviewPage: React.FC = () => {
         setCurrentQuestionIndex(nextIndex);
         setCurrentQuestion(mockQuestions[nextIndex]);
         
-        // Update agent speech and mode based on question type
+        // Update mode based on question type
         const nextQuestion = mockQuestions[nextIndex];
+        
         if (nextQuestion.type === 'coding') {
           setMode('coding');
-          setAgentSpeechText('Now let\'s test your coding skills. Please solve this programming challenge.');
         } else if (nextQuestion.type === 'system_design') {
           setMode('whiteboard');
-          setAgentSpeechText('Time for system design! Use the whiteboard to illustrate your solution.');
+        } else if (nextQuestion.type === 'technical') {
+          setMode('discussion');
         } else {
           setMode('discussion');
-          setAgentSpeechText('Let\'s continue with the next question...');
         }
       }
     }, 45000); // Change question every 45 seconds
@@ -632,6 +708,8 @@ const InterviewPage: React.FC = () => {
     return () => {
       cleanupVideoStream();
       stopFaceDetection();
+      // Stop any ongoing speech
+      aiInterviewerVoice.stop();
     };
   }, []);
 
@@ -658,8 +736,9 @@ const InterviewPage: React.FC = () => {
       additionalData: faceDetectionStats
     });
     
-    // Clean up video stream before ending interview
+    // Clean up video stream and speech before ending interview
     cleanupVideoStream();
+    aiInterviewerVoice.stop();
     // Exit full screen when interview ends
     exitFullScreen();
     // Navigate to post-interview summary
@@ -668,13 +747,7 @@ const InterviewPage: React.FC = () => {
 
   const handleModeChange = (newMode: InterviewMode) => {
     setMode(newMode);
-    if (newMode === 'coding') {
-      setAgentSpeechText('Great! Let me see how you approach coding problems.');
-    } else if (newMode === 'whiteboard') {
-      setAgentSpeechText('Perfect! Please use the whiteboard to explain your solution visually.');
-    } else {
-      setAgentSpeechText('Let\'s continue our discussion about this topic.');
-    }
+    // No speech text updates needed anymore - just change mode
   };
 
   if (!interview) {
@@ -720,7 +793,16 @@ const InterviewPage: React.FC = () => {
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-6">
+            {/* Proctoring Status - Always show as active */}
+            <div className="flex items-center space-x-2">
+              <div className="relative">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <div className="absolute inset-0 w-2 h-2 rounded-full animate-ping bg-green-500" />
+              </div>
+              <span className="text-sm text-green-400 font-medium">Proctoring Active</span>
+            </div>
+            
             <button
               onClick={toggleFullScreen}
               className="flex items-center space-x-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg transition-colors"
@@ -728,9 +810,11 @@ const InterviewPage: React.FC = () => {
             >
               {isFullScreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
             </button>
+            
             <div className="text-sm text-gray-400">
               Question {currentQuestionIndex + 1} of {mockQuestions.length}
             </div>
+            
             <div className="flex items-center space-x-2">
               <div className={`w-3 h-3 rounded-full ${interview.status === 'scheduled' ? 'bg-green-400' : 'bg-gray-400'}`}></div>
               <span className="text-sm text-gray-300">Live Interview</span>
@@ -750,22 +834,13 @@ const InterviewPage: React.FC = () => {
               <div className="relative">
                 <div className="aspect-square bg-gray-800 rounded-lg overflow-hidden border-2 border-blue-500">
                   <AIAgent 
-                    isSpeaking={false}
+                    isSpeaking={isAgentSpeaking}
                   />
                 </div>
                 <div className="absolute bottom-2 left-2 flex items-center space-x-1">
                   <Bot className="w-4 h-4 text-blue-400" />
                   <span className="text-xs text-white font-medium">AI Interviewer</span>
                 </div>
-                {/* Agent Speech Text Overlay */}
-                <motion.div
-                  key={agentSpeechText}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="absolute -bottom-16 left-0 right-0 bg-blue-900/90 backdrop-blur-sm rounded-lg p-2"
-                >
-                  <p className="text-xs text-blue-100 text-center">{agentSpeechText}</p>
-                </motion.div>
               </div>
 
               {/* Candidate Video - Small Square */}
@@ -830,6 +905,13 @@ const InterviewPage: React.FC = () => {
                 </div>
                 {/* Video Controls */}
                 <div className="absolute bottom-2 right-2 flex space-x-1">
+                  <button
+                    onClick={toggleVoice}
+                    className={`p-1 rounded ${isVoiceEnabled ? 'bg-purple-600' : 'bg-gray-600'} text-white hover:opacity-80 transition-opacity`}
+                    title={isVoiceEnabled ? 'Disable AI Voice' : 'Enable AI Voice'}
+                  >
+                    {isVoiceEnabled ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+                  </button>
                   <button
                     onClick={toggleCamera}
                     className={`p-1 rounded ${isCameraEnabled ? 'bg-green-600' : 'bg-red-600'} text-white hover:opacity-80 transition-opacity`}
@@ -967,6 +1049,8 @@ const InterviewPage: React.FC = () => {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Clean proctoring status - no detailed events shown to candidate */}
 
       {/* Bottom Control Panel */}
       <div className="bg-gray-800 border-t border-gray-700 p-4">

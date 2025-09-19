@@ -120,6 +120,15 @@ const CandidateDashboard: React.FC = () => {
     return hoursDiff <= 24 && hoursDiff > 0;
   };
 
+  const canStartInterview = (dateString: string) => {
+    const interviewDate = new Date(dateString);
+    const now = new Date();
+    const timeDiff = interviewDate.getTime() - now.getTime();
+    const minutesDiff = timeDiff / (1000 * 60);
+    // Allow starting 5 minutes before scheduled time
+    return minutesDiff <= 5 && minutesDiff > -60; // Also allow up to 1 hour after scheduled time
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
@@ -190,6 +199,7 @@ const CandidateDashboard: React.FC = () => {
               {interviews.map((interview) => {
                 const { date, time } = formatDate(interview.scheduledDate);
                 const isSoon = isInterviewSoon(interview.scheduledDate);
+                const canStart = canStartInterview(interview.scheduledDate);
                 
                 return (
                   <motion.div
@@ -205,6 +215,20 @@ const CandidateDashboard: React.FC = () => {
                       <div className="flex items-center space-x-1 text-orange-600 text-sm font-medium mb-3">
                         <AlertCircle className="w-4 h-4" />
                         <span>Starting soon!</span>
+                      </div>
+                    )}
+
+                    {!canStart && (
+                      <div className="flex items-center space-x-1 text-amber-600 text-xs mb-3 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
+                        <Clock className="w-4 h-4" />
+                        <span>Available 5 minutes before scheduled time</span>
+                      </div>
+                    )}
+
+                    {canStart && (
+                      <div className="flex items-center space-x-1 text-green-600 text-xs mb-3 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
+                        <Play className="w-4 h-4" />
+                        <span>Ready to start!</span>
                       </div>
                     )}
                     
@@ -249,11 +273,17 @@ const CandidateDashboard: React.FC = () => {
                         <span>View Details</span>
                       </button>
                       <button
-                        onClick={() => navigate(`/interview/${interview.id}`)}
-                        className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
+                        onClick={() => canStart ? navigate(`/interview/${interview.id}`) : null}
+                        disabled={!canStart}
+                        className={`flex-1 font-medium py-2 px-4 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 ${
+                          canStart 
+                            ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white' 
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                        title={canStart ? 'Start Interview' : 'Interview can only be started 5 minutes before scheduled time'}
                       >
                         <Play className="w-4 h-4" />
-                        <span>Start Interview</span>
+                        <span>{canStart ? 'Start Interview' : 'Not Ready'}</span>
                       </button>
                     </div>
 
